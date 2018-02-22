@@ -384,6 +384,8 @@ to update-bus-stops
     set pos pos + 1
   ]
   update-bus-stops-colors
+
+  ask bus_stops [ set label length passengers_waiting ]
 end
 
 to create-passengers [count_passengers check_in_time from_bus_stop to_bus_stop]

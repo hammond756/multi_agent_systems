@@ -21,7 +21,11 @@ globals [graph]
 
 to init-buses
   ; Initialize your agents here.
-  set fixed_route [4 5 16 11 17 10 21 22 13 7 1 19 23 14 0 15 18 15 12 20 9 8 2 8 6 8 9 3]
+  ifelse bus_id mod 2 = 0 [
+    set fixed_route [ 4 5 16 11 17 10 21 22 13 7 1 19 23 14 0 15 18 15 12 20 9 8 2 8 6 8 9 3 ]
+  ][
+    set fixed_route [ 9 8 6 8 2 8 9 20 12 15 18 15 0 14 23 19 1 7 13 22 21 10 17 11 16 5 4 3 ]
+  ]
   set spawn? True
   
   if bus_type = 1 [ set capacity 12 ]
@@ -36,14 +40,29 @@ end
 to execute-actions
   ; Add decision making strategies for your agents here.
   ; You are allowed to use the global variable 'ticks'.
+  set label (word length bus_passengers " / " capacity)
   
   ; if the bus is currently at a stop
     if current_stop > -1 [
       
-      if empty? fixed_route [ set fixed_route [4 5 16 11 17 10 21 22 13 7 1 19 23 14 0 15 18 15 12 20 9 8 2 8 6 8 9 3 ] ]
+      if empty? fixed_route [ 
+        ifelse bus_id mod 2 = 0 [
+          set fixed_route [4 5 16 11 17 10 21 22 13 7 1 19 23 14 0 15 18 15 12 20 9 8 2 8 6 8 9 3 ]
+        ][
+          set fixed_route [ 9 8 6 8 2 8 9 20 12 15 18 15 0 14 23 19 1 7 13 22 21 10 17 11 16 5 4 3 ]
+        ]
+      ]
       
       set next_stop first fixed_route
       set fixed_route but-first fixed_route
+      
+      ; drop off passengers at their destination
+      foreach bus_passengers [
+        let passenger_id first ?
+        let destination last ?
+        
+        if destination = current_stop [ drop-off-passenger passenger_id ]
+      ]
       
       ; pick up waiting passengers
       let free_seats capacity - length bus_passengers
@@ -54,17 +73,10 @@ to execute-actions
          pick-up-passenger first passenger
       ]
       
-      ; drop off passengers at their destination
-      foreach bus_passengers [
-        let passenger_id first ?
-        let destination last ?
-        
-        if destination = current_stop [ drop-off-passenger passenger_id ]
-      ]
     ]
     
     if capacity - length bus_passengers = 0 and spawn? [ 
-      add-bus 3
+      add-bus 1
       set spawn? False
     ]
     
