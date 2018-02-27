@@ -1,0 +1,17 @@
+;; reporters about bus properties
+
+;; Report the capacity of a bus
+to-report get-capacity
+  if bus_type = 1 [ report 12 ]
+  if bus_type = 2 [ report 60 ]
+  if bus_type = 3 [ report 150 ]
+end  
+
+;; Report which route this bus has to take
+to-report get-route
+  ifelse bus_id mod 2 = 0 [
+    set report [ 4 5 16 11 17 10 21 22 13 7 1 19 23 14 0 15 18 15 12 20 9 8 2 8 6 8 9 3 ]
+  ][
+    set report [ 9 8 6 8 2 8 9 20 12 15 18 15 0 14 23 19 1 7 13 22 21 10 17 11 16 5 4 3 ]
+  ]
+end
