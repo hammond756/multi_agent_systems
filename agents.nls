@@ -76,7 +76,7 @@ to execute-actions
     ]
     
     if capacity - length bus_passengers = 0 and spawn? [ 
-      add-bus 1
+      add-bus 3
       set spawn? False
     ]
     
