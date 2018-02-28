@@ -1,4 +1,4 @@
-;; reporters about bus properties
+;; Reporters about bus properties.
 
 ;; Report the capacity of a bus
 to-report get-capacity
@@ -9,9 +9,35 @@ end
 
 ;; Report which route this bus has to take
 to-report get-route
-  ifelse bus_id mod 2 = 0 [
-    set report [ 4 5 16 11 17 10 21 22 13 7 1 19 23 14 0 15 18 15 12 20 9 8 2 8 6 8 9 3 ]
-  ][
-    set report [ 9 8 6 8 2 8 9 20 12 15 18 15 0 14 23 19 1 7 13 22 21 10 17 11 16 5 4 3 ]
+  let route_id bus_id mod 5
+  if route_id = 4 [ report [ 16 11 1 19 23 14 0 15 18 ] ]
+  if route_id = 3 [ report [ 16 5 17 7 13 22 12 ] ]
+  if route_id = 2 [ report [ 2 8 9 3 4 10 13 23 19 ] ]
+  if route_id = 1 [ report [ 3 20 21 22 12 ] ]
+  if route_id = 0 [ report [ 3 9 8 6 ] ]
+end
+
+to-report get-shortest-path-to [ bus_stop_id ]
+  report map [ [who] of ? ] nw:turtles-on-path-to turtle bus_stop_id
+end
+
+;; Report the next stop on the route
+to-report next-stop-on-route
+  ;TODO: breaks when elements occurs multiple times in a list (position always returns the position of the first)
+  report item (position current_stop fixed_route + 1) fixed_route
+end
+
+;; report a list of all postions at witch an element occurs
+to-report multiple-position [ element a_list ]
+  let result (list)
+  let counter 0
+  
+  foreach a_list [
+    if element = ? [ 
+      set result lput counter result
+    ]
+    set counter (counter + 1)
   ]
+  
+  report result
 end

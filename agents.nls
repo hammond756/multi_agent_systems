@@ -26,6 +26,8 @@ to init-buses
   set fixed_route get-route
   set capacity get-capacity
   
+  go-to-route
+  
   ; This list contains the topology of the entire network of bus stops, which is known to all agents. You can use this, for instance, to calculate the shortest path between two bus stops.
   set graph [[22 15 14] [11 19 23 7] [8] [16 4 20 9] [3 5 10] [4 16 10 17] [8] [1 17 13] [2 6 9] [3 8 20] [4 5 17 13 21] [1 16 17] [20 15 22] [7 10 22 23] [0 23] [0 12 18] [3 5 11] [5 7 10 11] [15] [1 23] [3 9 12 21] [10 20 22] [0 12 13 21] [1 13 14 19]]
 end
@@ -51,6 +53,27 @@ to pick-up-passengers
   ]
 end
 
+to add-new-bus [ bus_size ]
+    if capacity - length bus_passengers = 0 and spawn? [ 
+    add-bus bus_size
+    
+    ; just allow a bus to spawn once
+    set spawn? False
+  ]
+end
+
+to turn-around
+  if current_stop = last fixed_route [
+    set fixed_route reverse fixed_route
+  ]
+end
+
+to go-to-route
+  if not member? current_stop fixed_route [
+    travel-to first fixed_route
+  ]
+end
+
 to execute-actions
   ; Add decision making strategies for your agents here.
   ; You are allowed to use the global variable 'ticks'.
@@ -62,16 +85,13 @@ to execute-actions
     drop-off-passengers
     pick-up-passengers 
   ]
-    
-  if capacity - length bus_passengers = 0 and spawn? [ 
-    add-bus 3
-    
-    ; just allow a bus to spawn once
-    set spawn? False
-  ]
+  
+  ; add new bus if necessary
+  add-new-bus 3
   
   ; go towards the next stop
-  if next_stop > -1 [
-    travel-to next_stop
-  ]
+  travel-to next_stop
+  
+  ; if bus reaches last stop, turn around (TODO: if-statement outside of procedure?)
+  turn-around
 end
