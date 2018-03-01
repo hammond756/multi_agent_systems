@@ -1,4 +1,6 @@
-__includes [ "agents.nls" ]
+__includes [ "agents.nls" "reporters.nls" ]
+extensions[nw]
+
 breed [bus_stops bus_stop]
 undirected-link-breed [routes route]
 breed [buses bus]
@@ -43,6 +45,7 @@ globals [
 to setup
   clear-all
   reset-ticks
+  nw:set-context turtles links
   setup-statistics
   set-time
   create-world
@@ -385,7 +388,7 @@ to update-bus-stops
   ]
   update-bus-stops-colors
 
-  ask bus_stops [ set label length passengers_waiting ]
+  ask bus_stops [ set label name ]
 end
 
 to create-passengers [count_passengers check_in_time from_bus_stop to_bus_stop]
