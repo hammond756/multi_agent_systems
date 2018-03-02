@@ -32,6 +32,8 @@ to init-buses
   set fixed_route get-route
   set capacity get-capacity
   set beliefs []
+  set bus_passengers2 []
+  show first fixed_route
   set temp_route get-shortest-path-to (first fixed_route)  ;to get to the beginning of a route when just spawned
   go-to-route
 
@@ -85,7 +87,6 @@ to pick-up-passengers
       set new_bus_passenger fput passenger_id new_bus_passenger
       set new_bus_passenger lput route_to_destination new_bus_passenger
       set bus_passengers2 lput new_bus_passenger bus_passengers
-
     ]
   ]
 
