@@ -42,6 +42,10 @@ to init-buses
   set graph [[22 15 14] [11 19 23 7] [8] [16 4 20 9] [3 5 10] [4 16 10 17] [8] [1 17 13] [2 6 9] [3 8 20] [4 5 17 13 21] [1 16 17] [20 15 22] [7 10 22 23] [0 23] [0 12 18] [3 5 11] [5 7 10 11] [15] [1 23] [3 9 12 21] [10 20 22] [0 12 13 21] [1 13 14 19]]
 end
 
+to request-bus-on-route [ new_route_id new_bus_type ]
+  stop
+end
+
 ; drop off passengers at their destination
 to drop-off-passengers
   foreach passenger_routes [
@@ -93,6 +97,10 @@ to turn-around
   if current_stop = last fixed_route [
     set fixed_route reverse fixed_route
   ]
+end
+
+to add-bus-to-route [ new_route_id new_bus_type ]
+  add-bus new_bus_type
 end
 
 to execute-actions
@@ -157,7 +165,7 @@ end
 
 to announce-birth
   foreach buses-older-than-me [
-    let msg_belief (list "bus" (list bus_id route_id))
+    let msg_belief (list "bus" (list bus_id capacity route_id))
     let message build-message "inform" msg_belief
     send-message ? message
   ]
