@@ -10,7 +10,7 @@ buses-own [
   current_stop    ; ID of the bus stop where the agent (bus) currently is (-1 means that the agent is not at any bus stop).
   next_stop       ; ID of the bus stop the agent (bus) is traveling to (-1 means that the agent is not travelling to any bus stop).
 
-  bus_passengers2 ; list containing all ids of the bus passengers and their shortest path ([[passenger_id [shortest path]]  [passenger id [shortest path]]    ...])
+  passenger_routes ; list containing all ids of the bus passengers and their shortest path ([[passenger_id [shortest path]]  [passenger id [shortest path]]    ...])
 
   ; New local variables for students.
   ; You can create any new local variable you want. Just declare them here.
@@ -32,12 +32,8 @@ to init-buses
   set fixed_route get-route
   set capacity get-capacity
   set beliefs []
-  set bus_passengers2 []
-  show first fixed_route
+  set passenger_routes []
   set temp_route get-shortest-path-to (first fixed_route)  ;to get to the beginning of a route when just spawned
-  go-to-route
-
-  if bus_id <= 31 [ add-new-bus 1 ]
 
   ; let the whole fleet know you spawned and what route you are taking
   announce-birth
@@ -48,16 +44,17 @@ end
 
 ; drop off passengers at their destination
 to drop-off-passengers
-  foreach bus_passengers2 [
+  foreach passenger_routes [
     let passenger_id first ?
     let destination last last ?
 
     ; get shortest path for passenger
     let route_to_destination last ?
 
+    ; drop passengers at their destination or at a transit station on their desired tavel path
     if destination = current_stop or not can-take-passenger route_to_destination next_stop
       [ drop-off-passenger passenger_id
-        set bus_passengers2 remove ( list passenger_id route_to_destination ) bus_passengers2
+        set passenger_routes remove ( list passenger_id route_to_destination ) passenger_routes
         ]
   ]
 end
@@ -83,36 +80,18 @@ to pick-up-passengers
       pick-up-passenger passenger_id
 
       ;update passengers in bus, add their shortest path
-      let new_bus_passenger []
-      set new_bus_passenger fput passenger_id new_bus_passenger
-      set new_bus_passenger lput route_to_destination new_bus_passenger
-      set bus_passengers2 lput new_bus_passenger bus_passengers
+      let new_bus_passenger (list passenger_id route_to_destination)
+      set passenger_routes lput new_bus_passenger passenger_routes
     ]
   ]
 
 
 end
 
-to add-new-bus [ bus_size ]
-    if capacity - length bus_passengers = 0 and spawn? [
-    add-bus bus_size
-
-    ; just allow a bus to spawn once
-    set spawn? False
-  ]
-end
-
+;; Flip the route when the last stop is reached
 to turn-around
   if current_stop = last fixed_route [
     set fixed_route reverse fixed_route
-  ]
-end
-
-to go-to-route
-  ; function that brings the bus to its fixed route after it spawns
-
-  if not member? current_stop fixed_route [
-    foreach temp_route [travel-to ?]
   ]
 end
 
@@ -120,19 +99,33 @@ to execute-actions
   ; Add decision making strategies for your agents here.
   ; You are allowed to use the global variable 'ticks'.
   set label (word length bus_passengers " / " capacity)
+  
+  if count buses < 7 and spawn? [ 
+    add-bus 1 
+    set spawn? false
+  ]
 
   ; Go trough inbox to ensure up to date mental state
   process-inbox
 
-  ; if the bus is currently at a stop
+  ; Do normal behaviour
   if current_stop > -1 [
-    set next_stop next-stop-on-route
-    drop-off-passengers
-    pick-up-passengers
+    ifelse member? current_stop fixed_route [
+      set next_stop next-stop-on-route fixed_route
+      drop-off-passengers
+      pick-up-passengers
+    ][
+      ; otherwise navigate to route
+      set next_stop next-stop-on-route temp_route
+    ]
   ]
 
+    
   ; add new bus if necessary
-  add-new-bus 3
+  if full? and spawn? [ 
+    add-bus 3
+    set spawn? false
+   ]
 
   ; go towards the next stop
   travel-to next_stop
