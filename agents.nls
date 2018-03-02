@@ -52,9 +52,15 @@ to pick-up-passengers
   let n_waiting length get-passengers-at-stop current_stop
   let to_pickup min list free_seats n_waiting
   
+  ;TODO only pick up passenger if it's next stop of his shortest path is on your route
   foreach n-of to_pickup get-passengers-at-stop current_stop [ let passenger ?
     pick-up-passenger first passenger
+    
+    ;update passengers in bus, add their shortest path
+    
   ]
+  
+  
 end
 
 to add-new-bus [ bus_size ]
