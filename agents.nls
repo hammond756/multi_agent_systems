@@ -15,6 +15,7 @@ buses-own [
   fixed_route
   capacity
   spawn?
+  test_belief
 ]
 
 globals [graph]
@@ -23,7 +24,7 @@ to init-buses
   
   ; Initialize your agents here.
   set spawn? True
-  set fixed_route get-route (bus_id mod 1)
+  set fixed_route get-route (bus_id mod 7)
   set capacity get-capacity
   
   go-to-route
@@ -96,4 +97,34 @@ to execute-actions
   
   ; if bus reaches last stop, turn around (TODO: if-statement outside of procedure?)
   turn-around
+end
+
+;;;; COMMUNICATION
+
+; message = [ ticks sender message ]
+to process-inbox
+  while [not empty? inbox] [
+    let message first inbox
+    let time item 0 message
+    let sender item 1 message
+    let content item 2 message
+    let performative first content
+    
+    if performative = "inform" [
+      if first content = "new-route" [
+        add-route-to-beliefs last content
+      ]
+    ]
+    
+  ]
+end
+
+to add-belief [ belief_name content ]
+  ;if not member? content belief_name
+end
+
+;;;; BDI
+
+to update-belief-from-msg [ belief_type information ]
+  
 end

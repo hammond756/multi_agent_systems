@@ -7,6 +7,7 @@ to-report get-capacity
   if bus_type = 3 [ report 150 ]
 end  
 
+;;;;; Logic for handling bus-routes
 ;; Report which route this bus has to take
 to-report get-route [ route_id ]
   show route_id
@@ -42,4 +43,10 @@ to-report multiple-position [ element a_list ]
   ]
   
   report result
+end
+
+;;;; COMMUNICATION
+
+to-report build-message [ message_type content ]
+  report list message_type content
 end
