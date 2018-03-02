@@ -20,20 +20,13 @@ to-report get-route [ route_id ]
 end
 
 to-report get-shortest-path-to [ bus_stop_id ]
-  let bla 9999999
+  let route []
   ask bus_stop current_stop[
-    set bla map [ [who] of ? ] nw:turtles-on-path-to turtle bus_stop_id
+    set route map [ [who] of ? ] nw:turtles-on-path-to turtle bus_stop_id
   ]
+  report route
 end
 
-
-to-report get-distance-between [stop1 stop2]
-  let distance? 9999
-  ask bus_stop stop1 [
-    set distance? nw:weighted-distance-to bus_stop stop2 "route_size"
-  ]
-  report distance?
-end
 
 ;; Report the next stop on the route
 to-report next-stop-on-route
