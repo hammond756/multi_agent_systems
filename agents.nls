@@ -15,6 +15,7 @@ buses-own [
   fixed_route
   capacity
   spawn?
+  temp_route
 ]
 
 globals [graph]
@@ -23,9 +24,10 @@ to init-buses
   
   ; Initialize your agents here.
   set spawn? True
-  set fixed_route get-route (bus_id mod 1)
+  set fixed_route get-route (bus_id mod 7)
   set capacity get-capacity
-  
+  show first fixed_route
+  set temp_route get-shortest-path-to (first fixed_route)  ;to get to the beginning of a route when just spawned
   go-to-route
   
   if bus_id <= 31 [ add-new-bus 1 ]
@@ -71,8 +73,10 @@ to turn-around
 end
 
 to go-to-route
+  ; function that brings the bus to its fixed route after it spawns
+   
   if not member? current_stop fixed_route [
-    travel-to first fixed_route
+    foreach temp_route [travel-to ?]
   ]
 end
 
