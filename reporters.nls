@@ -48,3 +48,8 @@ to-report multiple-position [ element a_list ]
   
   report result
 end
+
+;; Determines whether to take passenger to next stop; returns boolean
+to-report can-take-passenger [ passenger_shortest_path next_bus_stop ] 
+  report member? next_stop passenger_shortest_path
+end
