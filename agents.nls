@@ -40,11 +40,17 @@ end
 
 ; drop off passengers at their destination
 to drop-off-passengers
-  foreach bus_passengers [
+  foreach bus_passengers2 [
     let passenger_id first ?
-    let destination last ?
+    let destination last last ?
+
+    ; get shortest path for passenger
+    let route_to_destination last ?
     
-    if destination = current_stop [ drop-off-passenger passenger_id ]
+    if destination = current_stop or not can-take-passenger route_to_destination next_stop
+      [ drop-off-passenger passenger_id 
+        set bus_passengers2 remove ( list passenger_id route_to_destination ) bus_passengers2
+        ]
   ]
 end
 
@@ -64,22 +70,17 @@ to pick-up-passengers
     let route_to_destination get-shortest-path-to destination 
     let passenger_id first passenger
     
-    
     ;If the next stop is in the shortest path of the passenger, take him
     if can-take-passenger route_to_destination next_stop[
       pick-up-passenger passenger_id
-      
-      
+         
       ;update passengers in bus, add their shortest path
       let new_bus_passenger []
       set new_bus_passenger fput passenger_id new_bus_passenger
       set new_bus_passenger lput route_to_destination new_bus_passenger
       set bus_passengers2 lput new_bus_passenger bus_passengers
-      
-    ]
-
-
     
+    ]    
   ]
   
   
