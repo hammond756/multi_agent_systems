@@ -5,17 +5,17 @@ to-report get-capacity
   if bus_type = 1 [ report 12 ]
   if bus_type = 2 [ report 60 ]
   if bus_type = 3 [ report 150 ]
-end  
+end
 
 to-report buses-older-than-me
   let start_id 24
   let bus_ids (list)
-  
+
   while [ start_id < bus_id ] [
     set bus_ids lput start_id bus_ids
     set start_id start_id + 1
   ]
-  
+
   report bus_ids
 end
 
@@ -50,20 +50,24 @@ end
 to-report multiple-position [ element a_list ]
   let result (list)
   let counter 0
-  
+
   foreach a_list [
-    if element = ? [ 
+    if element = ? [
       set result lput counter result
     ]
     set counter (counter + 1)
   ]
-  
+
   report result
 end
-
 ;;;; COMMUNICATION
 
 ; Create a message from a message_type (string) and content (any type)
 to-report build-message [ message_type content ]
   report list message_type content
+end
+
+;; Determines whether to take passenger to next stop; returns boolean
+to-report can-take-passenger [ passenger_shortest_path next_bus_stop ]
+  report member? next_stop passenger_shortest_path
 end

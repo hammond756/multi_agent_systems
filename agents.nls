@@ -5,10 +5,12 @@ buses-own [
 
   ; Dynamic, read-only variables. These values may change over time. You can read them, but you cannot change them.
   inbox           ; List containing all the incoming messages (a given message is a list like this [tick sender message]).
-  bus_passengers  ; List containing all the passengers that the agent (bus) is currently carrying (represented as a list like this [passenger_id bus_stop]).
+  bus_passengers  ; List containing all the passengers that the agent (bus) is currently carrying (represented as a list like this [passenger_id bus_stop])
   previous_stop   ; ID of the last bus stop that the agent (bus) visited (-1 means that the agent has not visited any bus stop yet).
   current_stop    ; ID of the bus stop where the agent (bus) currently is (-1 means that the agent is not at any bus stop).
   next_stop       ; ID of the bus stop the agent (bus) is traveling to (-1 means that the agent is not travelling to any bus stop).
+
+  bus_passengers2 ; list containing all ids of the bus passengers and their shortest path ([[passenger_id [shortest path]]  [passenger id [shortest path]]    ...])
 
   ; New local variables for students.
   ; You can create any new local variable you want. Just declare them here.
@@ -34,7 +36,7 @@ to init-buses
   go-to-route
 
   if bus_id <= 31 [ add-new-bus 1 ]
-  
+
   ; let the whole fleet know you spawned and what route you are taking
   announce-birth
 
@@ -44,11 +46,17 @@ end
 
 ; drop off passengers at their destination
 to drop-off-passengers
-  foreach bus_passengers [
+  foreach bus_passengers2 [
     let passenger_id first ?
-    let destination last ?
+    let destination last last ?
 
-    if destination = current_stop [ drop-off-passenger passenger_id ]
+    ; get shortest path for passenger
+    let route_to_destination last ?
+
+    if destination = current_stop or not can-take-passenger route_to_destination next_stop
+      [ drop-off-passenger passenger_id
+        set bus_passengers2 remove ( list passenger_id route_to_destination ) bus_passengers2
+        ]
   ]
 end
 
@@ -56,11 +64,32 @@ end
 to pick-up-passengers
   let free_seats capacity - length bus_passengers
   let n_waiting length get-passengers-at-stop current_stop
-  let to_pickup min list free_seats n_waiting
+  let to_pickup min list free_seats n_waiting ; How many passengers can be picked up
 
-  foreach n-of to_pickup get-passengers-at-stop current_stop [ let passenger ?
-    pick-up-passenger first passenger
+  ;TODO only pick up passenger if it's next stop of his shortest path is on your route
+  foreach n-of to_pickup get-passengers-at-stop current_stop [
+
+    let passenger ?
+
+    ; get shortest path for passenger
+    let destination last passenger
+    let route_to_destination get-shortest-path-to destination
+    let passenger_id first passenger
+
+    ;If the next stop is in the shortest path of the passenger, take him
+    if can-take-passenger route_to_destination next_stop[
+      pick-up-passenger passenger_id
+
+      ;update passengers in bus, add their shortest path
+      let new_bus_passenger []
+      set new_bus_passenger fput passenger_id new_bus_passenger
+      set new_bus_passenger lput route_to_destination new_bus_passenger
+      set bus_passengers2 lput new_bus_passenger bus_passengers
+
+    ]
   ]
+
+
 end
 
 to add-new-bus [ bus_size ]
@@ -90,7 +119,7 @@ to execute-actions
   ; Add decision making strategies for your agents here.
   ; You are allowed to use the global variable 'ticks'.
   set label (word length bus_passengers " / " capacity)
-  
+
   ; Go trough inbox to ensure up to date mental state
   process-inbox
 
@@ -127,7 +156,7 @@ to process-inbox
       let belief build-belief (first content) (last content)
       add-belief belief
     ]
-    
+
     set inbox remove message inbox
   ]
 end
@@ -157,12 +186,11 @@ end
 to-report beliefs-with-name [ belief_name ]
   let belief_set filter [ first ? = belief_name ] beliefs
   let values (list)
-  
+
   ; Add the content of each belief in the belief_set to a new list
   foreach belief_set [
     set values lput last ? values
   ]
-  
+
   report values
 end
-
