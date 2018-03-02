@@ -15,22 +15,24 @@ buses-own [
   fixed_route
   capacity
   spawn?
-  test_belief
+  temp_route
+  beliefs
 ]
 
 globals [graph]
 
 to init-buses
-  
+
   ; Initialize your agents here.
   set spawn? True
   set fixed_route get-route (bus_id mod 7)
   set capacity get-capacity
-  
+  show first fixed_route
+  set temp_route get-shortest-path-to (first fixed_route)  ;to get to the beginning of a route when just spawned
   go-to-route
-  
+
   if bus_id <= 31 [ add-new-bus 1 ]
-  
+
   ; This list contains the topology of the entire network of bus stops, which is known to all agents. You can use this, for instance, to calculate the shortest path between two bus stops.
   set graph [[22 15 14] [11 19 23 7] [8] [16 4 20 9] [3 5 10] [4 16 10 17] [8] [1 17 13] [2 6 9] [3 8 20] [4 5 17 13 21] [1 16 17] [20 15 22] [7 10 22 23] [0 23] [0 12 18] [3 5 11] [5 7 10 11] [15] [1 23] [3 9 12 21] [10 20 22] [0 12 13 21] [1 13 14 19]]
 end
@@ -40,7 +42,7 @@ to drop-off-passengers
   foreach bus_passengers [
     let passenger_id first ?
     let destination last ?
-    
+
     if destination = current_stop [ drop-off-passenger passenger_id ]
   ]
 end
@@ -50,16 +52,16 @@ to pick-up-passengers
   let free_seats capacity - length bus_passengers
   let n_waiting length get-passengers-at-stop current_stop
   let to_pickup min list free_seats n_waiting
-  
+
   foreach n-of to_pickup get-passengers-at-stop current_stop [ let passenger ?
     pick-up-passenger first passenger
   ]
 end
 
 to add-new-bus [ bus_size ]
-    if capacity - length bus_passengers = 0 and spawn? [ 
+    if capacity - length bus_passengers = 0 and spawn? [
     add-bus bus_size
-    
+
     ; just allow a bus to spawn once
     set spawn? False
   ]
@@ -72,8 +74,10 @@ to turn-around
 end
 
 to go-to-route
+  ; function that brings the bus to its fixed route after it spawns
+
   if not member? current_stop fixed_route [
-    travel-to first fixed_route
+    foreach temp_route [travel-to ?]
   ]
 end
 
@@ -81,20 +85,20 @@ to execute-actions
   ; Add decision making strategies for your agents here.
   ; You are allowed to use the global variable 'ticks'.
   set label (word length bus_passengers " / " capacity)
-  
+
   ; if the bus is currently at a stop
   if current_stop > -1 [
     set next_stop next-stop-on-route
     drop-off-passengers
-    pick-up-passengers 
+    pick-up-passengers
   ]
-  
+
   ; add new bus if necessary
   add-new-bus 3
-  
+
   ; go towards the next stop
   travel-to next_stop
-  
+
   ; if bus reaches last stop, turn around (TODO: if-statement outside of procedure?)
   turn-around
 end
@@ -109,13 +113,13 @@ to process-inbox
     let sender item 1 message
     let content item 2 message
     let performative first content
-    
+
     if performative = "inform" [
       if first content = "new-route" [
         add-route-to-beliefs last content
       ]
     ]
-    
+
   ]
 end
 
@@ -126,5 +130,5 @@ end
 ;;;; BDI
 
 to update-belief-from-msg [ belief_type information ]
-  
+
 end
