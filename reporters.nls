@@ -18,7 +18,7 @@ end
 
 ; Sorts a list on bus id in decending order. Assumes bus_id is first element of every object in the list
 ; eg. [ [24 "foo"] [27 "bar"] ] -> [ [27 "foo"] [24 "bar"] ]
-to-report sorted-on-bus-id [ a_list ]
+to-report sort-by-bus-id [ a_list ]
   report sort-by [ first ?1 > first ?2 ] a_list
 end
 
@@ -29,8 +29,10 @@ end
 ;; Report the bus_id of a bus that just got spawned and has the requested_capacity
 to-report fresh-bus-with-capacity [ requested_capacity ]
   let belief_on_fleet table:get beliefs "bus-spec"
-  let youngest_three first-3 sorted-on-bus-id belief_on_fleet
-  report first filter [ item 1 ? = requested_capacity ] youngest_three
+  let youngest_three first-3 sort-by-bus-id belief_on_fleet
+  
+  ; filter on capacity and check if not already assigned
+  report first filter [ item 1 ? = requested_capacity and item 2 ? = -1 ] youngest_three
 end
 
 to-report buses-older-than-me
