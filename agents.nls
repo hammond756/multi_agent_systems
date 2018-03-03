@@ -25,17 +25,18 @@ buses-own [
 globals [graph]
 
 to init-buses
-  
-  if member? bus_id initial-fleet [ 
-    init-initial-fleet
-  ]
 
   ; Initialize your agents here.
   set spawn? True
   set capacity get-capacity
   set passenger_routes []
   set fixed_route []
+  set route_id -1
   init-beliefs
+  
+  if member? bus_id initial-fleet [ 
+    init-initial-fleet
+  ]
   
   ; let the whole fleet know you spawned and what route you are taking
   announce-birth
@@ -113,6 +114,7 @@ end
 
 ;; Flip the route when the last stop is reached
 to turn-around
+  if length fixed_route < 1 [ stop ]
   if current_stop = last fixed_route [
     set fixed_route reverse fixed_route
   ]
@@ -133,6 +135,9 @@ to execute-actions
 
   ; Go trough inbox to ensure up to date mental state
   process-inbox
+  
+  ; Unassigned busses just read their messages
+  if not (route_id > -1) [ stop ]
 
   ; Do normal behaviour
   if current_stop > -1 [
@@ -147,8 +152,9 @@ to execute-actions
   ]
 
   ; add new bus if necessary
-  if full? and spawn? [ 
-    request-bus-on-route route_id 2
+  ;if full? and spawn? [
+  if ticks > 50 and spawn? [
+    request-bus-on-route route_id 12
     set spawn? false
    ]
 
