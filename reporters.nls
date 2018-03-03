@@ -11,6 +11,11 @@ to-report full?
   report capacity - length bus_passengers = 0
 end
 
+;; The object which busses use to keep eachother informed about their state
+to-report bus-spec
+  report (list bus_id capacity route_id)
+end
+
 to-report buses-older-than-me
   let start_id 24
   let bus_ids (list)
@@ -67,6 +72,12 @@ end
 ;;;; COMMUNICATION
 
 ; Create a message from a message_type (string) and content (any type)
+; NB: message_type should equal the name of the reporter in the case of an inform-sync
+;
+; message_types:
+; - inform (send some data, one way)
+; - inform-sync (send some data and expect the same data in return)
+; - request (ask a turtle to perform some action)
 to-report build-message [ message_type content ]
   report list message_type content
 end
