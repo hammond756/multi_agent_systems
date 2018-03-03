@@ -154,21 +154,45 @@ to process-inbox
     let performative first body
     let content last body
 
+    if performative = "inform-sync" [
+      add-belief-from-msg content
+      
+      ; first content is a string containing belief_name. 
+      ; runresult calls the reporter that is contained by the string 
+      ; (eg. runretrieval "bus-spec", calls to-report bus-spec)
+      let reciprocal_data runresult (first content)
+      let reply_message build-message "inform" (list (first content) reciprocal_data)
+      send-message sender reply_message
+    ]
     if performative = "inform" [
-      let belief build-belief (first content) (last content)
-      add-belief belief
+      add-belief-from-msg content
     ]
 
     set inbox remove message inbox
   ]
 end
 
+; Take massage content and use it to update belief
+; content = [ belief_name belief_content ]
+to add-belief-from-msg [ content ]
+  let belief build-belief (first content) (last content)
+  add-belief belief
+end
+
+; Broadcast bus specifications to all busses that were created before the caller
+; See to-report bus-spec for the data that is shared
 to announce-birth
+  show (word bus_id " announced birth")
+  
   foreach buses-older-than-me [
-    let msg_belief (list "bus" (list bus_id capacity route_id))
-    let message build-message "inform" msg_belief
+    let msg_content (list "bus-spec" bus-spec)
+    let message build-message "inform-sync" msg_content
     send-message ? message
   ]
+end
+
+to-report bus-spec
+  report (list bus_id capacity route_id)
 end
 
 ;; Add belief to the belief base (avoiding duplicates)
