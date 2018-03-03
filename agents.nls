@@ -219,6 +219,7 @@ end
 
 to fail-on-request [ requester_id reason ]
   let content build-message "failure" reason
+  show content
   send-message requester_id content
 end
 
