@@ -191,6 +191,10 @@ to announce-birth
   ]
 end
 
+to-report bus-spec
+  report (list bus_id capacity route_id)
+end
+
 ;; Add belief to the belief base (avoiding duplicates)
 to add-belief [ new_belief ]
   if not member? new_belief beliefs [
