@@ -1,5 +1,8 @@
 __includes [ "agents.nls" "reporters.nls" ]
-extensions[nw]
+
+; nw: network - reason about links
+; table: table - dictionary-like datatypes
+extensions[nw table]
 
 breed [bus_stops bus_stop]
 undirected-link-breed [routes route]

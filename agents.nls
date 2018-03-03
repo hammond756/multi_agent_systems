@@ -28,13 +28,16 @@ to init-buses
 
   ; Initialize your agents here.
   set spawn? True
-  set route_id (bus_id mod 7)
-  set fixed_route get-route
   set capacity get-capacity
-  set beliefs []
   set passenger_routes []
-  set temp_route get-shortest-path-to (first fixed_route)  ;to get to the beginning of a route when just spawned
-
+  set fixed_route []
+  set route_id -1
+  init-beliefs
+  
+  if member? bus_id initial-fleet [ 
+    init-initial-fleet
+  ]
+  
   ; let the whole fleet know you spawned and what route you are taking
   announce-birth
 
@@ -42,8 +45,26 @@ to init-buses
   set graph [[22 15 14] [11 19 23 7] [8] [16 4 20 9] [3 5 10] [4 16 10 17] [8] [1 17 13] [2 6 9] [3 8 20] [4 5 17 13 21] [1 16 17] [20 15 22] [7 10 22 23] [0 23] [0 12 18] [3 5 11] [5 7 10 11] [15] [1 23] [3 9 12 21] [10 20 22] [0 12 13 21] [1 13 14 19]]
 end
 
-to request-bus-on-route [ new_route_id new_bus_type ]
-  stop
+to request-bus-on-route [ new_route_id new_bus_capacity ]
+  let available_bus_ids fresh-bus-with-capacity new_bus_capacity
+  if length available_bus_ids > 0 [
+    let bus_to_aks first available_bus_ids
+    let request_body (list (word "assign-to-route " new_route_id))
+    let request_msg build-message "request" request_body
+    send-message bus_to_aks request_msg
+  ]
+end
+
+to init-initial-fleet
+  set route_id (bus_id mod 7)
+  set fixed_route get-route
+  set temp_route get-shortest-path-to (first fixed_route)  ;to get to the beginning of a route when just spawned
+end
+
+to init-beliefs
+  set beliefs table:make
+  
+  table:put beliefs "bus-spec" []
 end
 
 ; drop off passengers at their destination
@@ -94,6 +115,7 @@ end
 
 ;; Flip the route when the last stop is reached
 to turn-around
+  if length fixed_route < 1 [ stop ]
   if current_stop = last fixed_route [
     set fixed_route reverse fixed_route
   ]
@@ -108,13 +130,15 @@ to execute-actions
   ; You are allowed to use the global variable 'ticks'.
   set label (word length bus_passengers " / " capacity)
   
-  if count buses < 7 and spawn? [ 
-    add-bus 1 
-    set spawn? false
+  if not (last initial-fleet = bus_id) and count buses < 7 [
+    add-bus 1
   ]
 
   ; Go trough inbox to ensure up to date mental state
   process-inbox
+  
+  ; Unassigned busses just read their messages
+  if not (route_id > -1) [ stop ]
 
   ; Do normal behaviour
   if current_stop > -1 [
@@ -128,10 +152,9 @@ to execute-actions
     ]
   ]
 
-    
   ; add new bus if necessary
-  if full? and spawn? [ 
-    add-bus 3
+   if full? and spawn? [
+    request-bus-on-route route_id 12
     set spawn? false
    ]
 
@@ -167,10 +190,57 @@ to process-inbox
     if performative = "inform" [
       add-belief-from-msg content
     ]
+    if performative = "request" [
+      let action first content
+   
+      ifelse can-perform action [ 
+        agree-to-request sender
+        run action
+      ][
+        fail-on-request sender "Not able to perform this action"
+      ]
+    ]
 
     set inbox remove message inbox
   ]
 end
+
+; Checks if the agent is able to perform the supplied action.
+; action is a string containing a statement (eg "assign-to-route 5")
+; This reporter assumes a procedure named "can-<procedure> [<arguments>]" reporter is available.
+to-report can-perform [ action ]
+  report runresult (word "can-" action)
+end
+  
+to agree-to-request [ requester_id ]
+  let content build-message "agree" [True]
+  send-message requester_id content
+end
+
+to fail-on-request [ requester_id reason ]
+  let content build-message "failure" reason
+  show content
+  send-message requester_id content
+end
+
+
+;;;;;;; ASSIGN-TO-ROUTE
+; procedure and reporter belong together
+to assign-to-route [ new_route_id ]
+  if can-assign-to-route new_route_id [
+    set route_id new_route_id
+    set fixed_route get-route
+    set temp_route get-shortest-path-to (first fixed_route)
+    add-bus bus_type
+    broadcast-reassignment
+  ]
+end
+; check condition on which bus is able to assign itself to a new route
+; (currently just if it is not assigned yet)
+to-report can-assign-to-route [ new_route_id ]
+  report route_id = -1
+end
+;;;; END
 
 ; Take massage content and use it to update belief
 ; content = [ belief_name belief_content ]
@@ -182,8 +252,6 @@ end
 ; Broadcast bus specifications to all busses that were created before the caller
 ; See to-report bus-spec for the data that is shared
 to announce-birth
-  show (word bus_id " announced birth")
-  
   foreach buses-older-than-me [
     let msg_content (list "bus-spec" bus-spec)
     let message build-message "inform-sync" msg_content
@@ -191,14 +259,28 @@ to announce-birth
   ]
 end
 
-to-report bus-spec
-  report (list bus_id capacity route_id)
+;; Difference with announce-birth is that this message doens't ask for a message back
+to broadcast-reassignment
+  foreach buses-older-than-me [
+    let msg_content (list "bus-spec" bus-spec)
+    let message build-message "inform" msg_content
+    send-message ? message
+  ]
 end
 
 ;; Add belief to the belief base (avoiding duplicates)
 to add-belief [ new_belief ]
-  if not member? new_belief beliefs [
-    set beliefs fput new_belief beliefs
+  let belief_name first new_belief
+  let value last new_belief
+  let current_state table:get beliefs belief_name
+  
+  if belief_name = "bus-spec" [
+    let b_id first value
+    set current_state filter [ first ? != b_id ] current_state
+  ]
+  
+  if not member? value current_state [
+    table:put beliefs belief_name lput value current_state
   ]
 end
 
