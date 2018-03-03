@@ -231,6 +231,7 @@ to assign-to-route [ new_route_id ]
     set fixed_route get-route
     set temp_route get-shortest-path-to (first fixed_route)
     add-bus bus_type
+    broadcast-reassignment
   ]
 end
 ; check condition on which bus is able to assign itself to a new route
@@ -250,11 +251,18 @@ end
 ; Broadcast bus specifications to all busses that were created before the caller
 ; See to-report bus-spec for the data that is shared
 to announce-birth
-  show (word bus_id " announced birth")
-  
   foreach buses-older-than-me [
     let msg_content (list "bus-spec" bus-spec)
     let message build-message "inform-sync" msg_content
+    send-message ? message
+  ]
+end
+
+;; Difference with announce-birth is that this message doens't ask for a message back
+to broadcast-reassignment
+  foreach buses-older-than-me [
+    let msg_content (list "bus-spec" bus-spec)
+    let message build-message "inform" msg_content
     send-message ? message
   ]
 end
@@ -264,6 +272,11 @@ to add-belief [ new_belief ]
   let belief_name first new_belief
   let value last new_belief
   let current_state table:get beliefs belief_name
+  
+  if belief_name = "bus-spec" [
+    let b_id first value
+    set current_state filter [ first ? != b_id ] current_state
+  ]
   
   if not member? value current_state [
     table:put beliefs belief_name lput value current_state
