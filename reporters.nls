@@ -11,6 +11,28 @@ to-report full?
   report capacity - length bus_passengers = 0
 end
 
+; Reports the data that buses communicate to know who's who
+to-report bus-spec
+  report (list bus_id capacity route_id)
+end
+
+; Sorts a list on bus id in decending order. Assumes bus_id is first element of every object in the list
+; eg. [ [24 "foo"] [27 "bar"] ] -> [ [27 "foo"] [24 "bar"] ]
+to-report sorted-on-bus-id [ a_list ]
+  report sort-by [ first ?1 > first ?2 ] a_list
+end
+
+to-report first-3 [ a_list ]
+  report (list (item 0 a_list) (item 1 a_list) (item 2 a_list))
+end
+
+;; Report the bus_id of a bus that just got spawned and has the requested_capacity
+to-report fresh-bus-with-capacity [ requested_capacity ]
+  let belief_on_fleet table:get beliefs "bus-spec"
+  let youngest_three first-3 sorted-on-bus-id belief_on_fleet
+  report first filter [ item 1 ? = requested_capacity ] youngest_three
+end
+
 to-report buses-older-than-me
   let start_id 24
   let bus_ids (list)
@@ -33,6 +55,10 @@ to-report get-route
   if route_id = 2 [ report [ 3 20 12 15 18 ] ]
   if route_id = 1 [ report [ 3 4 10 21 22 13 23 1 7 ] ]
   if route_id = 0 [ report [ 12 22 21 10 13 7 17 5 16 ] ]
+end
+
+to-report initial-fleet 
+  report [ 24 25 26 27 28 29 30 ]
 end
 
 ;; Report the shortest path a the bus' current stop to another stop
