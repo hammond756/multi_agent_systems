@@ -46,11 +46,12 @@ to init-buses
 end
 
 to request-bus-on-route [ new_route_id new_bus_capacity ]
-  let available_bus_id fresh-bus-with-capacity new_bus_capacity
-  if length available_bus_id > 0 [
-    let bus_to_aks first available_bus_id
+  let available_bus_ids fresh-bus-with-capacity new_bus_capacity
+  if length available_bus_ids > 0 [
+    let bus_to_aks first available_bus_ids
     let request_body (list (word "assign-to-route " new_route_id))
     let request_msg build-message "request" request_body
+    send-message bus_to_aks request_msg
   ]
 end
 
@@ -152,8 +153,7 @@ to execute-actions
   ]
 
   ; add new bus if necessary
-  ;if full? and spawn? [
-  if ticks > 50 and spawn? [
+   if full? and spawn? [
     request-bus-on-route route_id 12
     set spawn? false
    ]
@@ -205,6 +205,9 @@ to process-inbox
   ]
 end
 
+; Checks if the agent is able to perform the supplied action.
+; action is a string containing a statement (eg "assign-to-route 5")
+; This reporter assumes a procedure named "can-<procedure> [<arguments>]" reporter is available.
 to-report can-perform [ action ]
   report runresult (word "can-" action)
 end
@@ -223,7 +226,7 @@ end
 ;;;;;;; ASSIGN-TO-ROUTE
 ; procedure and reporter belong together
 to assign-to-route [ new_route_id ]
-  if can-assign-to-route [
+  if can-assign-to-route new_route_id [
     set route_id new_route_id
     set fixed_route get-route
     set temp_route get-shortest-path-to (first fixed_route)
@@ -232,8 +235,8 @@ to assign-to-route [ new_route_id ]
 end
 ; check condition on which bus is able to assign itself to a new route
 ; (currently just if it is not assigned yet)
-to-report can-assign-to-route
-  report route_id > -1
+to-report can-assign-to-route [ new_route_id ]
+  report route_id = -1
 end
 ;;;; END
 
