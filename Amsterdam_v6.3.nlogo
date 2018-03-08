@@ -1014,6 +1014,24 @@ final_average_travelling_time
 1
 11
 
+PLOT
+1102
+694
+1302
+844
+Route coverage
+NIL
+NIL
+0.0
+10.0
+0.0
+10.0
+true
+false
+"set-plot-x-range 0 7\nset-plot-pen-mode 1\nset-histogram-num-bars 7" ""
+PENS
+"default" 1.0 0 -16777216 true "" "histogram [ route_id ] of buses"
+
 @#$#@#$#@
 ## WHAT IS IT?
 

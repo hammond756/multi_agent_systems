@@ -94,19 +94,21 @@ to pick-up-passengers
   let free_seats capacity - length bus_passengers
   let n_waiting length get-passengers-at-stop current_stop
   let to_pickup min list free_seats n_waiting ; How many passengers can be picked up
-
+  
   ;TODO only pick up passenger if it's next stop of his shortest path is on your route
-  foreach n-of to_pickup get-passengers-at-stop current_stop [
-
+  foreach get-passengers-at-stop current_stop [
+    
+    if capacity - length bus_passengers = 0 [ stop ]
+    
     let passenger ?
-
+    
     ; get shortest path for passenger
     let destination last passenger
     let route_to_destination get-shortest-path-to destination
     let passenger_id first passenger
 
     ;If the next stop is in the shortest path of the passenger, take him
-    if can-take-passenger route_to_destination next_stop[
+    if can-take-passenger route_to_destination next_stop [
       pick-up-passenger passenger_id
 
       ;update passengers in bus, add their shortest path
@@ -152,6 +154,8 @@ to execute-actions
   if current_stop > -1 [
     ifelse member? current_stop fixed_route [
       set next_stop next-stop-on-route fixed_route
+      
+      ; Only handle passengers on designated route, otherwise the transit system breaks.
       drop-off-passengers
       pick-up-passengers
     ][
@@ -161,8 +165,15 @@ to execute-actions
   ]
 
   ; add new bus if necessary
+  ; TODO: Doesn't take into account the destination of the people that can't be picked up
+  ; - Only relevant for transit-stations
+  ; TODO: De-activate buses / Re-route buses
+  ; TODO: Figure out what bus_type to spawn (do experiments on function parameters)
+  ; - Length of route
+  ; - Capacity
+  ; - 
    if full? and spawn? [
-    request-bus-on-route route_id 12
+    request-bus-on-route route_id 150
     set spawn? false
    ]
 
