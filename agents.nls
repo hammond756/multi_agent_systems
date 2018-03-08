@@ -45,22 +45,27 @@ to init-buses
   set graph [[22 15 14] [11 19 23 7] [8] [16 4 20 9] [3 5 10] [4 16 10 17] [8] [1 17 13] [2 6 9] [3 8 20] [4 5 17 13 21] [1 16 17] [20 15 22] [7 10 22 23] [0 23] [0 12 18] [3 5 11] [5 7 10 11] [15] [1 23] [3 9 12 21] [10 20 22] [0 12 13 21] [1 13 14 19]]
 end
 
+; Runs when critical condition is reached. Asks for new bus on the specified route
 to request-bus-on-route [ new_route_id new_bus_capacity ]
   let available_bus_ids fresh-bus-with-capacity new_bus_capacity
   if length available_bus_ids > 0 [
     let bus_to_aks first available_bus_ids
+    
+    ; send request message to one of the waiting buses
     let request_body (list (word "assign-to-route " new_route_id))
     let request_msg build-message "request" request_body
     send-message bus_to_aks request_msg
   ]
 end
 
+; Exeption to general initialization, only do this for the first 7 vehicles
 to init-initial-fleet
   set route_id (bus_id mod 7)
   set fixed_route get-route
   set temp_route get-shortest-path-to (first fixed_route)  ;to get to the beginning of a route when just spawned
 end
 
+; Initialize a table (dictionary) to store beliefs
 to init-beliefs
   set beliefs table:make
   
@@ -115,14 +120,12 @@ end
 
 ;; Flip the route when the last stop is reached
 to turn-around
+  ; skip when there is no route to ride
   if length fixed_route < 1 [ stop ]
+  
   if current_stop = last fixed_route [
     set fixed_route reverse fixed_route
   ]
-end
-
-to add-bus-to-route [ new_route_id new_bus_type ]
-  add-bus new_bus_type
 end
 
 to execute-actions
@@ -130,8 +133,13 @@ to execute-actions
   ; You are allowed to use the global variable 'ticks'.
   set label (word length bus_passengers " / " capacity)
   
+  ; TODO: Find alternative for 'count buses'
   if not (last initial-fleet = bus_id) and count buses < 7 [
     add-bus 1
+  ]
+  if count buses = 8 and bus_id = 31 [
+    add-bus 2
+    add-bus 3
   ]
 
   ; Go trough inbox to ensure up to date mental state
@@ -204,13 +212,6 @@ to process-inbox
     set inbox remove message inbox
   ]
 end
-
-; Checks if the agent is able to perform the supplied action.
-; action is a string containing a statement (eg "assign-to-route 5")
-; This reporter assumes a procedure named "can-<procedure> [<arguments>]" reporter is available.
-to-report can-perform [ action ]
-  report runresult (word "can-" action)
-end
   
 to agree-to-request [ requester_id ]
   let content build-message "agree" [True]
@@ -225,7 +226,9 @@ end
 
 
 ;;;;;;; ASSIGN-TO-ROUTE
-; procedure and reporter belong together
+;;procedure and reporter belong together
+;
+; Assign yourself to the new_route_id and let everyone know you did so
 to assign-to-route [ new_route_id ]
   if can-assign-to-route new_route_id [
     set route_id new_route_id

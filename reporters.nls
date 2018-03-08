@@ -110,3 +110,10 @@ end
 to-report can-take-passenger [ passenger_shortest_path next_bus_stop ]
   report member? next_stop passenger_shortest_path
 end
+
+; Checks if the agent is able to perform the supplied action.
+; action is a string containing a statement (eg "assign-to-route 5")
+; This reporter assumes a procedure named "can-<procedure> [<arguments>]" reporter is available.
+to-report can-perform [ action ]
+  report runresult (word "can-" action)
+end
