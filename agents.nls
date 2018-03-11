@@ -20,6 +20,7 @@ buses-own [
   spawn?
   temp_route
   beliefs
+  route-style ;  TODO maybe create a new 'fixed route' -> ROUTE 8, which is the flexible style route
 ]
 
 globals [graph]
@@ -33,11 +34,11 @@ to init-buses
   set fixed_route []
   set route_id -1
   init-beliefs
-  
-  if member? bus_id initial-fleet [ 
+
+  if member? bus_id initial-fleet [
     init-initial-fleet
   ]
-  
+
   ; let the whole fleet know you spawned and what route you are taking
   announce-birth
 
@@ -50,13 +51,25 @@ to request-bus-on-route [ new_route_id new_bus_capacity ]
   let available_bus_ids fresh-bus-with-capacity new_bus_capacity
   if length available_bus_ids > 0 [
     let bus_to_aks first available_bus_ids
-    
+
     ; send request message to one of the waiting buses
     let request_body (list (word "assign-to-route " new_route_id))
     let request_msg build-message "request" request_body
     send-message bus_to_aks request_msg
   ]
 end
+
+
+; Runs when a new flexible bus is requested
+; This is done by bus 24 when the ratio total passengers waiting / capacity of fleet > 1
+to request-flexible-bus [ new_bus_capacity ]
+  ;TODO
+end
+
+
+
+
+
 
 ; Exeption to general initialization, only do this for the first 7 vehicles
 to init-initial-fleet
@@ -68,10 +81,13 @@ end
 ; Initialize a table (dictionary) to store beliefs
 to init-beliefs
   set beliefs table:make
-  
+
   table:put beliefs "bus-spec" []
 end
 
+;;; TODO: I belief this function can be re-purposed. We drop off all passengers at each stop, so if
+;;; it is their stop, they are already out of the bus and won't get back in because they arrived
+;;; or need to go to another node.
 ; drop off passengers at their destination
 to drop-off-passengers
   foreach passenger_routes [
@@ -94,14 +110,14 @@ to pick-up-passengers
   let free_seats capacity - length bus_passengers
   let n_waiting length get-passengers-at-stop current_stop
   let to_pickup min list free_seats n_waiting ; How many passengers can be picked up
-  
+
   ;TODO only pick up passenger if it's next stop of his shortest path is on your route
   foreach get-passengers-at-stop current_stop [
-    
+
     if capacity - length bus_passengers = 0 [ stop ]
-    
+
     let passenger ?
-    
+
     ; get shortest path for passenger
     let destination last passenger
     let route_to_destination get-shortest-path-to destination
@@ -120,11 +136,11 @@ to pick-up-passengers
 
 end
 
-;; Flip the route when the last stop is reached
+;; Flip the route when the last stop is reached for fixed route buses
 to turn-around
   ; skip when there is no route to ride
   if length fixed_route < 1 [ stop ]
-  
+
   if current_stop = last fixed_route [
     set fixed_route reverse fixed_route
   ]
@@ -134,7 +150,7 @@ to execute-actions
   ; Add decision making strategies for your agents here.
   ; You are allowed to use the global variable 'ticks'.
   set label (word length bus_passengers " / " capacity)
-  
+
   ; TODO: Find alternative for 'count buses'
   if not (last initial-fleet = bus_id) and count buses < 7 [
     add-bus 1
@@ -146,21 +162,29 @@ to execute-actions
 
   ; Go trough inbox to ensure up to date mental state
   process-inbox
-  
+
   ; Unassigned busses just read their messages
   if not (route_id > -1) [ stop ]
 
-  ; Do normal behaviour
+  ; Do normal behaviour - FOR FIXED BUSES
   if current_stop > -1 [
-    ifelse member? current_stop fixed_route [
-      set next_stop next-stop-on-route fixed_route
+    if route-style = "fixed" [ fixed-bus-behaviour ]
+    if route-style = "flexible" [ flexible-bus-behaviour ]
+  ]
+
+  ; bus 24 checks if new flexible buses are needed everey 3 ticks
+
+  if bus_id = 24 [
+    if ticks mod 3 = 0[
+
+      ; If the
+      if waiting-capacity-ratio > 1.5[
+        ;New flexible bus is needed
+
+        show "new flex bus is needed"
+      ]
       
-      ; Only handle passengers on designated route, otherwise the transit system breaks.
-      drop-off-passengers
-      pick-up-passengers
-    ][
-      ; otherwise navigate to route
-      set next_stop next-stop-on-route temp_route
+
     ]
   ]
 
@@ -171,7 +195,7 @@ to execute-actions
   ; TODO: Figure out what bus_type to spawn (do experiments on function parameters)
   ; - Length of route
   ; - Capacity
-  ; - 
+  ; -
    if full? and spawn? [
     request-bus-on-route route_id 150
     set spawn? false
@@ -198,9 +222,9 @@ to process-inbox
 
     if performative = "inform-sync" [
       add-belief-from-msg content
-      
-      ; first content is a string containing belief_name. 
-      ; runresult calls the reporter that is contained by the string 
+
+      ; first content is a string containing belief_name.
+      ; runresult calls the reporter that is contained by the string
       ; (eg. runretrieval "bus-spec", calls to-report bus-spec)
       let reciprocal_data runresult (first content)
       let reply_message build-message "inform" (list (first content) reciprocal_data)
@@ -211,8 +235,8 @@ to process-inbox
     ]
     if performative = "request" [
       let action first content
-   
-      ifelse can-perform action [ 
+
+      ifelse can-perform action [
         agree-to-request sender
         run action
       ][
@@ -223,7 +247,7 @@ to process-inbox
     set inbox remove message inbox
   ]
 end
-  
+
 to agree-to-request [ requester_id ]
   let content build-message "agree" [True]
   send-message requester_id content
@@ -233,6 +257,149 @@ to fail-on-request [ requester_id reason ]
   let content build-message "failure" reason
   show content
   send-message requester_id content
+end
+
+
+;;;;;;; FLEXIBLE BUS
+
+to stop-driving
+  set route_id -1
+  set fixed_route (list)
+end
+
+to fixed-bus-behaviour
+  ifelse member? current_stop fixed_route [
+      set next_stop next-stop-on-route fixed_route
+
+      ; Only handle passengers on designated route, otherwise the transit system breaks.
+      drop-off-passengers
+      pick-up-passengers
+    ][
+      ; otherwise navigate to route
+      set next_stop next-stop-on-route temp_route
+    ]
+end
+
+to flexible-bus-behaviour
+  vote-next-stop
+  if waiting-capacity-ratio < 0.5 [ stop-driving ]
+end
+
+;;;;;;; VOTING
+;Majority vote to decide next busstop
+to vote-next-stop
+
+  ;Drop all passengers
+  foreach passenger_routes [
+    let passenger_id first ?
+    let passenger_destination last last ?
+
+
+    ; get shortest path for passenger
+    let route_to_destination last ?
+
+    ; remove passengers from both passenger lists
+    drop-off-passenger passenger_id
+    set passenger_routes remove ( list passenger_id route_to_destination ) passenger_routes
+
+  ]
+
+
+  let waiting_passengers get-passengers-at-stop current_stop
+
+  ; Let all people at current stop vote for next stop
+  let votes []
+  ; calculate shortest path for all passengers
+  foreach waiting_passengers[
+
+    let passenger ?
+
+    ; get shortest path for passenger
+    let passenger_destination last passenger
+    let route_to_destination get-shortest-path-to passenger_destination
+    let passenger_id first passenger
+
+    ; each passenger votes for it's best next destination
+    let vote first route_to_destination
+    set votes lput vote votes
+  ]
+
+  ; Next stop is stop with the most votes (majority vote)
+  let next_bus_destination modes votes
+
+  ; if a tie occurred go to closest of the bus-stops that tied
+  if length next_bus_destination > 1 [
+
+    ; closest destination is a tuple of bus-stop distance
+    let closest_destination [-1 9999999]
+
+    ; Set closest destination to the bus stop that is closest of the most popular
+    foreach next_bus_destination[
+      let temp_destination ?
+      let temp_distance get-distance current_stop temp_destination
+
+
+      if temp_distance < last closest_destination[
+        set closest_destination list temp_distance temp_destination
+      ]
+    ]
+    ; set next destination to closest destination
+    set next_bus_destination first closest_destination
+
+  ]
+
+  ; If no passengers at stop left (all passengers arrived at destination)
+  ; Choose next stop randomly from adjacent bus stops
+  if length next_bus_destination = 0[
+    ;TODO
+  ]
+
+  ; Set next stop to next_bus_destination
+  set next_stop next_bus_destination
+
+  ; (ONLY) pick up passengers that voted for that stop
+  pick-up-passengers
+
+end
+
+to vote-on-fixed-route-capacity
+  let current_state table:get beliefs "bus-spec"
+  ; filter bus-spec belief on buses on your route and extract the bus_id from those bus-specs
+  let buses_on_my_route map [ first ? ] filter [ last ? = route_id ] current_state
+  
+  ; send request to vote to all buses on the route
+  foreach buses_on_my_route [
+    let request_body (list (word "vote-on-capacity " bus_id))
+    let request_msg build-message "request" request_body
+    send-message ? request_msg
+  ]
+end
+
+to count-votes-on-capacity
+  
+end
+
+;;;;;; VOTE-ON-CAPACITY
+to vote-on-capacity [ b_id ]
+  let msg_content (list "capacity-vote" capacity-vote)
+  let message build-message "inform" msg_content
+  send-message b_id message
+end
+
+; There are no conditions on the ability to cast a vote 
+; (only active buses on a specific route are asked to vote)
+; b_id -> bus id of the bus that requested the vote
+to-report can-vote-on-capacity [ b_id ]
+  report true
+end
+;;;; END VOTE-ON-CAPACITY
+
+to-report capacity-vote
+  let vote 0
+  
+  if length bus_passengers / capacity > 0.8 [ set vote 1 ]
+  
+  report vote
 end
 
 
@@ -254,7 +421,7 @@ end
 to-report can-assign-to-route [ new_route_id ]
   report route_id = -1
 end
-;;;; END
+;;;; END ASSIGN-TO-ROUTE
 
 ; Take massage content and use it to update belief
 ; content = [ belief_name belief_content ]
@@ -287,12 +454,16 @@ to add-belief [ new_belief ]
   let belief_name first new_belief
   let value last new_belief
   let current_state table:get beliefs belief_name
-  
+
   if belief_name = "bus-spec" [
     let b_id first value
     set current_state filter [ first ? != b_id ] current_state
   ]
-  
+  ; Empty belief to prepare for new round of voting
+  if belief_name = "capacity-vote" [
+    set current_state (list)
+  ]
+
   if not member? value current_state [
     table:put beliefs belief_name lput value current_state
   ]
