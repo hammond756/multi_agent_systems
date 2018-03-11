@@ -20,7 +20,7 @@ buses-own [
   spawn?
   temp_route
   beliefs
-  route-style
+  route-style ;  TODO maybe create a new 'fixed route' -> ROUTE 8, which is the flexible style route
 ]
 
 globals [graph]
@@ -58,6 +58,18 @@ to request-bus-on-route [ new_route_id new_bus_capacity ]
     send-message bus_to_aks request_msg
   ]
 end
+
+
+; Runs when a new flexible bus is requested
+; This is done by bus 24 when the ratio total passengers waiting / capacity of fleet > 1
+to request-flexible-bus [ new_bus_capacity ]
+  ;TODO
+end
+
+
+
+
+
 
 ; Exeption to general initialization, only do this for the first 7 vehicles
 to init-initial-fleet
@@ -119,7 +131,7 @@ to pick-up-passengers
 
 end
 
-;; Flip the route when the last stop is reached
+;; Flip the route when the last stop is reached for fixed route buses
 to turn-around
   ; skip when there is no route to ride
   if length fixed_route < 1 [ stop ]
@@ -158,6 +170,26 @@ to execute-actions
     ][
       ; otherwise navigate to route
       set next_stop next-stop-on-route temp_route
+    ]
+  ]
+
+
+  ; bus 24 checks if new flexible buses are needed everey 3 ticks
+  
+  if bus_id = 24 [
+    if ticks mod 3 = 0[
+      
+      ; If the 
+      if waiting-capacity-ratio > 1.5[
+        ;New flexible bus is needed
+        
+        show "new flex bus is needed"
+        
+        
+      ]
+      
+      
+      
     ]
   ]
 
