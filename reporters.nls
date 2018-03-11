@@ -128,7 +128,6 @@ to-report waiting-capacity-ratio
   ; Sum the capacity of all buses that are currently active
   let current_state_beliefs table:get beliefs "bus-spec"
   let sum_capacity 0
-  show word "current state beliefs is: " current_state_beliefs
   
   ; for all buses, if it is active, add to total fleet capacity
   foreach current_state_beliefs[
@@ -137,12 +136,8 @@ to-report waiting-capacity-ratio
     if item 2 temp_bus != -1[
        let temp_capacity item 1 temp_bus
        
-       show temp_capacity
-       
        set sum_capacity sum_capacity + temp_capacity
       ]
-
-    show sum_capacity
   ]
   
   ; initialize variable to sum the number of people waiting  
@@ -160,8 +155,6 @@ to-report waiting-capacity-ratio
 
   ; create ratio variable => if reporter reports 0, no active buses exist (e.g. at tick 0)
   let ratio 0
-  
-  show word "people waiting: " people_waiting
   
   ; calculate ratio
   if sum_capacity > 0[

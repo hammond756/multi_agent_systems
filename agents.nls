@@ -21,6 +21,7 @@ buses-own [
   temp_route
   beliefs
   route-style ;  TODO maybe create a new 'fixed route' -> ROUTE 8, which is the flexible style route
+  tick_of_vote_request
 ]
 
 globals [graph]
@@ -33,6 +34,7 @@ to init-buses
   set passenger_routes []
   set fixed_route []
   set route_id -1
+  set tick_of_vote_request 0
   init-beliefs
 
   if member? bus_id initial-fleet [
@@ -68,14 +70,14 @@ to request-flexible-bus [ratio]
   ;TODO ratio must be capacity fleet - people waiting
 
   ; determine bus type
-  let new_bus_capacity 1
+  let new_bus_capacity 12
 
   if (ratio > 2.5) and (ratio < 5) [
-    set new_bus_capacity 2
+    set new_bus_capacity 60
   ]
 
   if ratio >= 5[
-   set new_bus_capacity 3
+   set new_bus_capacity 150
   ]
   ; determine which buses can become a new flexible bus of the type determined above
   let available_bus_ids idle-bus-with-capacity new_bus_capacity
@@ -107,6 +109,7 @@ to init-initial-fleet
   set route_id (bus_id mod 7)
   set fixed_route get-route
   set temp_route get-shortest-path-to (first fixed_route)  ;to get to the beginning of a route when just spawned
+  set route-style "fixed"
 end
 
 ; Initialize a table (dictionary) to store beliefs
@@ -114,6 +117,7 @@ to init-beliefs
   set beliefs table:make
 
   table:put beliefs "bus-spec" []
+  table:put beliefs "capacity-vote" []
 end
 
 ;;; TODO: I belief this function can be re-purposed. We drop off all passengers at each stop, so if
@@ -208,10 +212,11 @@ to execute-actions
   if bus_id = 24 [
     if ticks mod 3 = 0[
 
+      let ratio waiting-capacity-ratio
       ; If the
-      if waiting-capacity-ratio > 1.5[
+      if ratio > 0.5[
         ;New flexible bus is needed
-
+        request-flexible-bus ratio
         show "new flex bus is needed"
       ]
 
@@ -299,6 +304,14 @@ to stop-driving
 end
 
 to fixed-bus-behaviour
+  if empty? bus_passengers [
+    request-vote-on-fixed-route-capacity
+    set tick_of_vote_request ticks
+  ]
+  ; Bus should wait three ticks before counting the votes
+  if tick_of_vote_request > 0 and ticks = tick_of_vote_request + 3 [
+    count-votes-on-capacity
+  ]
   ifelse member? current_stop fixed_route [
       set next_stop next-stop-on-route fixed_route
 
@@ -313,7 +326,7 @@ end
 
 to flexible-bus-behaviour
   vote-next-stop
-  if waiting-capacity-ratio < 0.5 [ stop-driving ]
+  ;if waiting-capacity-ratio < 0.5 [ stop-driving ]
 end
 
 ;;;;;;; VOTING
@@ -351,12 +364,27 @@ to vote-next-stop
     let passenger_id first passenger
 
     ; each passenger votes for it's best next destination
-    let vote first route_to_destination
+    let vote item 1 route_to_destination
     set votes lput vote votes
   ]
 
   ; Next stop is stop with the most votes (majority vote)
   let next_bus_destination modes votes
+  
+  ; If no passengers at stop left (all passengers arrived at destination)
+  ; Choose next stop randomly from adjacent bus stops
+  if length next_bus_destination = 0[
+    show "len = 0"
+    let options item current_stop graph
+    set next_stop one-of options
+  ]
+
+  
+  
+  if length next_bus_destination = 1 [
+    ; Set next stop to next_bus_destination
+    set next_stop first next_bus_destination
+  ]
 
   ; if a tie occurred go to closest of the bus-stops that tied
   if length next_bus_destination > 1 [
@@ -379,40 +407,43 @@ to vote-next-stop
 
   ]
 
-  ; If no passengers at stop left (all passengers arrived at destination)
-  ; Choose next stop randomly from adjacent bus stops
-  if length next_bus_destination = 0[
-    ;TODO
-  ]
-
-  ; Set next stop to next_bus_destination
-  set next_stop next_bus_destination
 
   ; (ONLY) pick up passengers that voted for that stop
   pick-up-passengers
 
 end
 
-to vote-on-fixed-route-capacity
+to request-vote-on-fixed-route-capacity
   let current_state table:get beliefs "bus-spec"
   ; filter bus-spec belief on buses on your route and extract the bus_id from those bus-specs
   let buses_on_my_route map [ first ? ] filter [ last ? = route_id ] current_state
 
   ; send request to vote to all buses on the route
   foreach buses_on_my_route [
-    let request_body (list (word "vote-on-capacity " bus_id))
+    let request_body (list (word "vote-under-capacity " bus_id))
     let request_msg build-message "request" request_body
     send-message ? request_msg
   ]
 end
 
 to count-votes-on-capacity
-
+  let votes table:get beliefs "capacity-vote"
+  
+  ; the bus that requests the votes always votes against.
+  ; This way it will never stop driving if it is the last bus
+  set votes fput 0 votes
+  let votes_for sum votes
+  let votes_against (length votes) - votes_for
+  if votes_for > votes_against [
+    stop-driving
+  ]
+  
+  table:put beliefs "capacity-vote" []
 end
 
 ;;;;;; VOTE-ON-CAPACITY
-to vote-on-capacity [ b_id ]
-  let msg_content (list "capacity-vote" capacity-vote)
+to vote-under-capacity [ b_id ]
+  let msg_content (list "capacity-vote" under-capacity-vote)
   let message build-message "inform" msg_content
   send-message b_id message
 end
@@ -420,15 +451,15 @@ end
 ; There are no conditions on the ability to cast a vote
 ; (only active buses on a specific route are asked to vote)
 ; b_id -> bus id of the bus that requested the vote
-to-report can-vote-on-capacity [ b_id ]
+to-report can-vote-under-capacity [ b_id ]
   report true
 end
 ;;;; END VOTE-ON-CAPACITY
 
-to-report capacity-vote
+to-report under-capacity-vote
   let vote 0
 
-  if length bus_passengers / capacity > 0.8 [ set vote 1 ]
+  if length bus_passengers / capacity < 0.5 [ set vote 1 ]
 
   report vote
 end
@@ -448,8 +479,6 @@ to assign-to-route [ new_route_id ]
       set fixed_route get-route
       set temp_route get-shortest-path-to (first fixed_route)
 
-      ;TODO NIET MEER ALTIJD NIEUWE BUS TOEVOEGEN
-      add-bus bus_type
       set route-style "fixed"
       broadcast-reassignment
 
@@ -459,7 +488,9 @@ to assign-to-route [ new_route_id ]
       set route-style "flexible"
       broadcast-reassignment
     ]
-
+    
+    ;TODO NIET MEER ALTIJD NIEUWE BUS TOEVOEGEN
+     add-bus bus_type
   ]
 end
 ; check condition on which bus is able to assign itself to a new route
@@ -504,10 +535,6 @@ to add-belief [ new_belief ]
   if belief_name = "bus-spec" [
     let b_id first value
     set current_state filter [ first ? != b_id ] current_state
-  ]
-  ; Empty belief to prepare for new round of voting
-  if belief_name = "capacity-vote" [
-    set current_state (list)
   ]
 
   if not member? value current_state [
