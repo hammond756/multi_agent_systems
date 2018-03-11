@@ -15,7 +15,7 @@ buses-own [
   ; New local variables for students.
   ; You can create any new local variable you want. Just declare them here.
   fixed_route
-  route_id
+  route_id ; route-id 8 is the 'flexible style route'
   capacity
   spawn?
   temp_route
@@ -47,23 +47,54 @@ to init-buses
 end
 
 ; Runs when critical condition is reached. Asks for new bus on the specified route
-to request-bus-on-route [ new_route_id new_bus_capacity ]
-  let available_bus_ids fresh-bus-with-capacity new_bus_capacity
+; FOR FIXED ROUTE BUSES ONLY
+to request-bus-on-route [ new_route_id new_bus_capacity]
+  let available_bus_ids idle-bus-with-capacity new_bus_capacity
   if length available_bus_ids > 0 [
     let bus_to_aks first available_bus_ids
 
     ; send request message to one of the waiting buses
     let request_body (list (word "assign-to-route " new_route_id))
-    let request_msg build-message "request" request_body
-    send-message bus_to_aks request_msg
+    let request_msg_fixed build-message "request" request_body
+    send-message bus_to_aks request_msg_fixed
   ]
 end
 
 
-; Runs when a new flexible bus is requested
+; Runs when a new FLEXIBLE bus is requested
 ; This is done by bus 24 when the ratio total passengers waiting / capacity of fleet > 1
-to request-flexible-bus [ new_bus_capacity ]
-  ;TODO
+to request-flexible-bus [ratio]
+
+  ;TODO ratio must be capacity fleet - people waiting
+
+  ; determine bus type
+  let new_bus_capacity 1
+
+  if (ratio > 2.5) and (ratio < 5) [
+    set new_bus_capacity 2
+  ]
+
+  if ratio >= 5[
+   set new_bus_capacity 3
+  ]
+  ; determine which buses can become a new flexible bus of the type determined above
+  let available_bus_ids idle-bus-with-capacity new_bus_capacity
+
+  ; ask idle bus to become a flexible bus
+  if length available_bus_ids > 0 [
+    let new_flex_bus first available_bus_ids
+
+    ; route 8 is the 'flexible route'
+    let new_route_id 8
+
+    ; send request message to one of the waiting buses
+    let request_body (list (word "assign-to-route " new_route_id))
+    let request_msg_fixed build-message "request" request_body
+    send-message new_flex_bus request_msg_fixed
+  ]
+
+
+
 end
 
 
@@ -183,7 +214,7 @@ to execute-actions
 
         show "new flex bus is needed"
       ]
-      
+
 
     ]
   ]
@@ -366,7 +397,7 @@ to vote-on-fixed-route-capacity
   let current_state table:get beliefs "bus-spec"
   ; filter bus-spec belief on buses on your route and extract the bus_id from those bus-specs
   let buses_on_my_route map [ first ? ] filter [ last ? = route_id ] current_state
-  
+
   ; send request to vote to all buses on the route
   foreach buses_on_my_route [
     let request_body (list (word "vote-on-capacity " bus_id))
@@ -376,7 +407,7 @@ to vote-on-fixed-route-capacity
 end
 
 to count-votes-on-capacity
-  
+
 end
 
 ;;;;;; VOTE-ON-CAPACITY
@@ -386,7 +417,7 @@ to vote-on-capacity [ b_id ]
   send-message b_id message
 end
 
-; There are no conditions on the ability to cast a vote 
+; There are no conditions on the ability to cast a vote
 ; (only active buses on a specific route are asked to vote)
 ; b_id -> bus id of the bus that requested the vote
 to-report can-vote-on-capacity [ b_id ]
@@ -396,9 +427,9 @@ end
 
 to-report capacity-vote
   let vote 0
-  
+
   if length bus_passengers / capacity > 0.8 [ set vote 1 ]
-  
+
   report vote
 end
 
@@ -407,13 +438,28 @@ end
 ;;procedure and reporter belong together
 ;
 ; Assign yourself to the new_route_id and let everyone know you did so
+; TODO assign je nu bussen niet als hun NIEUWE route id -1 is?
 to assign-to-route [ new_route_id ]
   if can-assign-to-route new_route_id [
     set route_id new_route_id
-    set fixed_route get-route
-    set temp_route get-shortest-path-to (first fixed_route)
-    add-bus bus_type
-    broadcast-reassignment
+
+    ; if fixed route bus
+    if route_id != 8[
+      set fixed_route get-route
+      set temp_route get-shortest-path-to (first fixed_route)
+
+      ;TODO NIET MEER ALTIJD NIEUWE BUS TOEVOEGEN
+      add-bus bus_type
+      set route-style "fixed"
+      broadcast-reassignment
+
+    ]
+    ; if flexible bus
+    if route_id = 8 [
+      set route-style "flexible"
+      broadcast-reassignment
+    ]
+
   ]
 end
 ; check condition on which bus is able to assign itself to a new route
