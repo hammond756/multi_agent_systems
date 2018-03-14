@@ -307,6 +307,7 @@ to fixed-bus-behaviour
   if empty? bus_passengers [
     request-vote-on-fixed-route-capacity
     set tick_of_vote_request ticks
+    ;show "requested vote"
   ]
   ; Bus should wait three ticks before counting the votes
   if tick_of_vote_request > 0 and ticks = tick_of_vote_request + 3 [
@@ -363,7 +364,7 @@ to vote-next-stop
     let route_to_destination get-shortest-path-to passenger_destination
     let passenger_id first passenger
 
-    ; each passenger votes for it's best next destination
+    ; each passenger votes for it's best next destinations
     let vote item 1 route_to_destination
     set votes lput vote votes
   ]
@@ -373,14 +374,11 @@ to vote-next-stop
   
   ; If no passengers at stop left (all passengers arrived at destination)
   ; Choose next stop randomly from adjacent bus stops
-  if length next_bus_destination = 0[
-    show "len = 0"
+  if length next_bus_destination = 0 [
     let options item current_stop graph
     set next_stop one-of options
   ]
 
-  
-  
   if length next_bus_destination = 1 [
     ; Set next stop to next_bus_destination
     set next_stop first next_bus_destination
@@ -393,24 +391,20 @@ to vote-next-stop
     let closest_destination [-1 9999999]
 
     ; Set closest destination to the bus stop that is closest of the most popular
-    foreach next_bus_destination[
+    foreach next_bus_destination [
       let temp_destination ?
       let temp_distance get-distance current_stop temp_destination
 
-
-      if temp_distance < last closest_destination[
-        set closest_destination list temp_distance temp_destination
+      if temp_distance < last closest_destination [
+        set closest_destination list temp_destination temp_distance
       ]
     ]
     ; set next destination to closest destination
-    set next_bus_destination first closest_destination
-
+    set next_stop first closest_destination
   ]
-
 
   ; (ONLY) pick up passengers that voted for that stop
   pick-up-passengers
-
 end
 
 to request-vote-on-fixed-route-capacity
@@ -436,6 +430,7 @@ to count-votes-on-capacity
   let votes_against (length votes) - votes_for
   if votes_for > votes_against [
     stop-driving
+    ;show "stopped driving after vote"
   ]
   
   table:put beliefs "capacity-vote" []
