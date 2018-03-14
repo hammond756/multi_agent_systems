@@ -159,9 +159,7 @@ to-report waiting-capacity-ratio
   ; calculate ratio
   if sum_capacity > 0[
     set ratio (people_waiting / sum_capacity)
-    show word "ratio: " ratio
   ]
-  
   
   report ratio
   
