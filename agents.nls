@@ -293,6 +293,9 @@ to stop-driving
   set route_id -1
   set fixed_route (list)
   set route-style ""
+  
+  ; let the fleet know you are idle 
+  broadcast-reassignment
 end
 
 to fixed-bus-behaviour
@@ -545,6 +548,8 @@ to add-belief [ new_belief ]
 
   if belief_name = "bus-spec" [
     let b_id first value
+    
+    ; remove the belief on bus with b_id
     set current_state filter [ first ? != b_id ] current_state
   ]
 

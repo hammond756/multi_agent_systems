@@ -18,8 +18,11 @@ end
 
 ; Sorts a list on bus id in decending order. Assumes bus_id is first element of every object in the list
 ; eg. [ [24 "foo"] [27 "bar"] ] -> [ [27 "foo"] [24 "bar"] ]
-to-report sort-by-bus-id [ a_list ]
-  report sort-by [ first ?1 > first ?2 ] a_list
+to-report sort-by-bus-id [ a_list order ]
+  let new_list (list)
+  if order = "asc" [ set new_list sort-by [ first ?1 > first ?2 ] a_list ]
+  if order = "desc" [ set new_list sort-by [ first ?1 < first ?2 ] a_list ]
+  report new_list
 end
 
 ;; Report the bus_id of a bus that is not driving
@@ -28,7 +31,7 @@ to-report idle-bus-with-capacity [ requested_capacity ]
 
   ; filter on capacity and check if not already assigned
   let candidates filter [ item 1 ? = requested_capacity and item 2 ? = -1 ] belief_on_fleet
-  report map [ first ? ] candidates
+  report map [ first ? ] sort-by-bus-id candidates "desc"
 end
 
 to-report buses-older-than-me
