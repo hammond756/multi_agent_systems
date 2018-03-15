@@ -66,7 +66,8 @@ end
 
 
 ; Runs when a new FLEXIBLE bus is requested
-; This is done by bus 24 when the ratio total passengers waiting / capacity of fleet > 1
+; This is done by bus 
+; when the ratio total passengers waiting / capacity of fleet > 1
 to request-flexible-bus [ratio]
 
   ;TODO ratio must be capacity fleet / people waiting
@@ -211,9 +212,10 @@ to execute-actions
   if route-style = "fixed" [ fixed-bus-behaviour ]
   if route-style = "flexible" [ flexible-bus-behaviour ]
 
-  ; bus 24 checks if new flexible buses are needed everey 3 ticks
 
   if bus_id = 24 [
+    
+    ; bus 24 checks if new flexible buses are needed everey 3 ticks
     if ticks mod 3 = 0 [
 
       let ratio waiting-capacity-ratio
@@ -224,6 +226,25 @@ to execute-actions
         show "new flex bus is needed"
       ]
     ]
+    
+    
+    ; bus 24 checks if there is an auction needed to aid one of the bus-stations
+    if ticks mod 10 = 0 [
+      
+      ; A variable that stores the id's of busstations that need help
+      let stops_need_help bus-stops-that-need-help
+      
+      ; If there are bus_stops that need help, start an auction
+      if length stops_need_help > 0[
+        
+        ; Start an auction for all bus stops that are crowded
+        foreach stops_need_help[
+          start-auction ?
+        ]
+         
+      ]
+      
+    ]
   ]
 
   ; go towards the next stop
@@ -232,6 +253,43 @@ to execute-actions
   ; if bus reaches last stop, turn around (TODO: if-statement outside of procedure?)
   turn-around
 end
+
+
+
+;;; COMPETITION
+
+;Auction 
+to start-auction [bus-stop-id]
+
+  
+  ; Get current beliefs about the buses
+  let current_state_beliefs table:get beliefs "bus-spec"
+  
+  ; Variable to store IDs of all medium and large buses that are not 
+  ; assigned to a fixed route (i.e. flex or idle)
+  let send_message_to []
+  
+  ; for all buses
+  foreach current_state_beliefs[
+    
+    let temp_bus ?
+    let temp_bus_id item 0 temp_bus
+    let temp_capacity item 1 temp_bus
+    let temproute item 2 temp_bus
+    
+    ; if flex or idle bus and capacity is medium or large, add to message list
+    if (temproute = -1 or temproute = 8) and (temp_capacity = 150 or temp_capacity = 60)[
+      ; or .... and ....
+      
+      ; add to list
+
+      ]
+  ]
+  
+  
+end
+
+; TODO process auction results
 
 ;;;; COMMUNICATION
 

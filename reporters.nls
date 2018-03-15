@@ -165,3 +165,28 @@ to-report waiting-capacity-ratio
   report ratio
   
 end
+
+
+; Reports a list of Busstops that have more than 150 people waiting so extra busses can be send there
+; on the basis of an auction
+to-report bus-stops-that-need-help
+  let crowded-stops []
+  
+  ; Create a list of bus stops to loop over
+  let bus-stop_list [1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 ]
+  
+  ; for all busstops, ask how many people are waiting
+  foreach bus-stop_list[
+    let bus-stop-id ?
+    let temp_waiting get-passengers-at-stop bus-stop-id
+    
+    ; if more than 150 people are waiting, mark as crowded bus-stop
+    if length(temp_waiting) > 150[
+      set crowded-stops fput bus-stop-id crowded-stops
+    ]
+  ]
+  
+  ; report the crowded stops
+  report crowded-stops
+end
+
