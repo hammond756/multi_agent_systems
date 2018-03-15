@@ -22,17 +22,9 @@ to-report sort-by-bus-id [ a_list ]
   report sort-by [ first ?1 > first ?2 ] a_list
 end
 
-to-report first-3 [ a_list ]
-  report (list (item 0 a_list) (item 1 a_list) (item 2 a_list))
-end
-
 ;; Report the bus_id of a bus that is not driving
 to-report idle-bus-with-capacity [ requested_capacity ]
   let belief_on_fleet table:get beliefs "bus-spec"
-  
-  
-  
-  ;let youngest_three first-3 sort-by-bus-id belief_on_fleet
 
   ; filter on capacity and check if not already assigned
   let candidates filter [ item 1 ? = requested_capacity and item 2 ? = -1 ] belief_on_fleet

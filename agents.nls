@@ -69,18 +69,20 @@ end
 ; This is done by bus 24 when the ratio total passengers waiting / capacity of fleet > 1
 to request-flexible-bus [ratio]
 
-  ;TODO ratio must be capacity fleet - people waiting
+  ;TODO ratio must be capacity fleet / people waiting
 
   ; determine bus type
   let new_bus_capacity 12
 
-  if (ratio > 2.5) and (ratio < 5) [
+  if (ratio > yellow_bus_ratio) and (ratio < red_bus_ratio) [
     set new_bus_capacity 60
   ]
 
-  if ratio >= 5[
+  if ratio >= red_bus_ratio [
    set new_bus_capacity 150
   ]
+  
+  show (word "Requested " new_bus_capacity " at " ratio)
   ; determine which buses can become a new flexible bus of the type determined above
   let available_bus_ids idle-bus-with-capacity new_bus_capacity
 
@@ -216,7 +218,7 @@ to execute-actions
 
       let ratio waiting-capacity-ratio
       ; If the
-      if ratio > 0.5 [
+      if ratio > green_bus_ratio [
         ;New flexible bus is needed
         request-flexible-bus ratio
         show "new flex bus is needed"
