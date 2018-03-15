@@ -43,6 +43,12 @@ to-report buses-older-than-me
   report bus_ids
 end
 
+to-report all-buses-i-know
+  let belief_on_fleet table:get beliefs "bus-spec"
+  let bus_ids map [ first ? ] belief_on_fleet
+  report bus_ids
+end
+
 ;;;;; Logic for handling bus-routes
 ;; Report which route this bus has to take
 to-report get-route

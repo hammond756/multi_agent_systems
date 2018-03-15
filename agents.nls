@@ -342,7 +342,7 @@ to flexible-bus-behaviour
   if current_stop > -1 [
     vote-next-stop
   ]
-  ;if waiting-capacity-ratio < 0.5 [ stop-driving ]
+  if waiting-capacity-ratio < green_bus_ratio [ set stop_driving_at_next_stop? True ]
 end
 
 ;;;;;;; VOTING
@@ -500,7 +500,7 @@ to assign-to-route [ new_route_id ]
     broadcast-reassignment
     
     ;TODO NIET MEER ALTIJD NIEUWE BUS TOEVOEGEN
-     add-bus bus_type
+    add-bus bus_type
   ]
 end
 ; check condition on which bus is able to assign itself to a new route
@@ -528,8 +528,9 @@ to announce-birth
 end
 
 ;; Difference with announce-birth is that this message doens't ask for a message back
+;; AND it is sent to ALL buses.
 to broadcast-reassignment
-  foreach buses-older-than-me [
+  foreach all-buses-i-know [
     let msg_content (list "bus-spec" bus-spec)
     let message build-message "inform" msg_content
     send-message ? message
