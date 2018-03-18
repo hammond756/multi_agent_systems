@@ -118,7 +118,7 @@ end
 to init-initial-fleet
   set route_id (bus_id mod 7)
   set fixed_route get-route
-  set temp_route get-shortest-path-to (first fixed_route)  ;to get to the beginning of a route when just spawned
+  set temp_route get-shortest-path-to current_stop (first fixed_route)  ;to get to the beginning of a route when just spawned
   set route-style "fixed"
 end
 
@@ -166,7 +166,7 @@ to pick-up-passengers
 
     ; get shortest path for passenger
     let destination last passenger
-    let route_to_destination get-shortest-path-to destination
+    let route_to_destination get-shortest-path-to current_stop destination
     let passenger_id first passenger
 
     ;If the next stop is in the shortest path of the passenger, take him
@@ -390,30 +390,20 @@ end
 ; let the bus that won the auction, go to the crowded station
 to go-to-crowded-stop [crowded-bus-stop]
   
-  
-  
-  
-  ;TODO, dit werkt niet
-  ;TODO, werk met weighted shit
-  
-  
-  
-  
-  
+ 
   
   let route []
-  let from_stop -1
+  let from_stop current_stop
   
   ; if not in between bus_stops: go from current_stop, else from next_stop
-  ifelse current_stop > -1[
-    set from_stop current_stop]
-   [set from_stop next_stop]
-  
-  
-  ask bus_stop from_stop[
-    set route map [ [who] of ? ] nw:turtles-on-path-to turtle crowded-bus-stop
+  if from_stop = -1[
+    set from_stop next_stop
   ]
   
+  
+  
+  set route get-shortest-path-to from_stop crowded-bus-stop 
+
   ; set temp route to route
   set temp_route route
   
@@ -581,7 +571,7 @@ to vote-next-stop
 
     ; get shortest path for passenger
     let passenger_destination last passenger
-    let route_to_destination get-shortest-path-to passenger_destination
+    let route_to_destination get-shortest-path-to current_stop passenger_destination
     let passenger_id first passenger
 
     ; each passenger votes for it's best next destinations
@@ -693,7 +683,7 @@ to assign-to-route [ new_route_id ]
     ; if fixed route bus
     if route_id != 8 [
       set fixed_route get-route
-      set temp_route get-shortest-path-to (first fixed_route)
+      set temp_route get-shortest-path-to current_stop (first fixed_route)
 
       set route-style "fixed"
     ]
