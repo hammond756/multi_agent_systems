@@ -66,8 +66,6 @@ to request-bus-on-route [ new_route_id new_bus_capacity]
     let request_body (list (word "assign-to-route " new_route_id))
     let request_msg_fixed build-message "request" request_body
     send-message bus_to_ask request_msg_fixed
-    
-    show (word ticks " assign-to-route " bus_to_ask)
   ]
 end
 
@@ -233,36 +231,35 @@ to execute-actions
 end
 
 to principle-agent-delegation
-  show random 10
-    ; bus 24 checks if new flexible buses are needed everey 3 ticks
-    if ticks mod 3 = 0 [
-
-      let ratio waiting-capacity-ratio
-      ; If the
-      if ratio > green_bus_ratio [
-        ;New flexible bus is needed
-        request-flexible-bus ratio
-      ]
+  ; bus 24 checks if new flexible buses are needed everey 3 ticks
+  if ticks mod 3 = 0 [
+    
+    let ratio waiting-capacity-ratio
+    ; If the
+    if ratio > green_bus_ratio [
+      ;New flexible bus is needed
+      request-flexible-bus ratio
     ]
-    
-    
-    ; bus 24 checks if there is an auction needed to aid one of the bus-stations
-    ;if ticks mod 10 = 0 [
-      
-      ; A variable that stores the id's of busstations that need help
-    ;  let stops_need_help bus-stops-that-need-help
-      
-      ; If there are bus_stops that need help, start an auction
-    ;  if length stops_need_help > 0[
-        
-        ; Start an auction for all bus stops that are crowded
-    ;    foreach stops_need_help[
-    ;      start-auction ?
-    ;    ]
-         
-    ;  ]
-      
-    ;]
+  ]
+  
+  
+  ; bus 24 checks if there is an auction needed to aid one of the bus-stations
+  ;if ticks mod 10 = 0 [
+  
+  ; A variable that stores the id's of busstations that need help
+  ;  let stops_need_help bus-stops-that-need-help
+  
+  ; If there are bus_stops that need help, start an auction
+  ;  if length stops_need_help > 0[
+  
+  ; Start an auction for all bus stops that are crowded
+  ;    foreach stops_need_help[
+  ;      start-auction ?
+  ;    ]
+  
+  ;  ]
+  
+  ;]
 end
 
 
@@ -641,9 +638,11 @@ to assign-to-route [ new_route_id ]
   ]
 end
 ; check condition on which bus is able to assign itself to a new route
-; (currently just if it is not assigned yet)
+; 1. bus should not have a route
+; 2. can't accept an offer in the tick after initialization,
+; because it will broadcast reassignment to an incomplete agentset
 to-report can-assign-to-route [ new_route_id ]
-  report route_id = -1
+  report route_id = -1 and ticks - birth_tick > 1
 end
 ;;;; END ASSIGN-TO-ROUTE
 
@@ -667,10 +666,6 @@ end
 ;; Difference with announce-birth is that this message doens't ask for a message back
 ;; AND it is sent to ALL buses.
 to broadcast-reassignment
-  if bus_id > 0 [ 
-    show (word ticks " " all-buses-i-know)
-    show (word ticks " " inbox)
-  ]
   foreach all-buses-i-know [
     let msg_content (list "bus-spec" bus-spec)
     let message build-message "inform" msg_content
