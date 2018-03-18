@@ -257,7 +257,6 @@ to principle-agent-delegation
         ; Start an auction for all bus stops that are crowded
         foreach stops_need_help[
           table:put beliefs (word "auction-bid-" ?) []
-          show word "starting auction for: " ?
           start-auction ?
           ;set the tick of the auction request at the current tick
           set tick_of_auction_request ticks
@@ -354,14 +353,11 @@ end
 to process-auction [crowded_stop]
   ; TODO, process it PER go to bus-station
   
-  
+  show word "processing auction for: " crowded_stop
   ; init
   let highest_bid -1
   let id_winner -1
-  let all_bids table:get beliefs "auction-bid"
-  
-  ; retrieve the bus-stop that is crowded
-  let crowded-bus-stop item 0 item 2 all_bids
+  let all_bids table:get beliefs word "auction-bid-" crowded_stop
   
   ; go through all bids and check which one is the highest
   foreach all_bids[
@@ -376,7 +372,7 @@ to process-auction [crowded_stop]
   
   ; Send a message to the winner of the auction with the request to go to the 
   ; crowded bus station
-  let request_body (list (word "go-to-crowded-stop " crowded-bus-stop))
+  let request_body (list (word "go-to-crowded-stop " crowded_stop))
   let request_msg build-message "request" request_body
   send-message id_winner request_msg
   
@@ -393,6 +389,18 @@ end
 
 ; let the bus that won the auction, go to the crowded station
 to go-to-crowded-stop [crowded-bus-stop]
+  
+  
+  
+  
+  ;TODO, dit werkt niet
+  ;TODO, werk met weighted shit
+  
+  
+  
+  
+  
+  
   let route []
   let from_stop -1
   
@@ -414,7 +422,8 @@ end
 
 
 to-report can-go-to-crowded-stop [crowded-bus-stop]
-  report true
+  ; If you are not assigned yet
+  report length(temp_route) = 0
 end
 
 ;;;; COMMUNICATION
