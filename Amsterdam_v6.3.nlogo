@@ -46,6 +46,9 @@ globals [
 ]
 
 to setup
+  ; TODO
+  random-seed 1
+
   clear-all
   reset-ticks
   nw:set-context turtles links
@@ -1041,7 +1044,7 @@ green_bus_ratio
 green_bus_ratio
 0
 10
-0.5
+5.5
 0.1
 1
 NIL
@@ -1056,7 +1059,7 @@ yellow_bus_ratio
 yellow_bus_ratio
 0
 10
-0.5
+5.7
 0.1
 1
 NIL
@@ -1071,7 +1074,7 @@ red_bus_ratio
 red_bus_ratio
 0
 10
-1.7
+5.4
 0.1
 1
 NIL

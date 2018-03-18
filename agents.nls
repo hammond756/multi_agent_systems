@@ -17,12 +17,14 @@ buses-own [
   fixed_route
   route_id ; route-id 8 is the 'flexible style route'
   capacity
-  spawn?
   temp_route
   beliefs
   route-style ;  fixed or flexible
-  tick_of_vote_request
+  outstanding_vote
   stop_driving_at_next_stop?
+  
+  ; TODO: for debuggin purposes
+  birth_tick
 ]
 
 globals [graph]
@@ -30,13 +32,16 @@ globals [graph]
 to init-buses
 
   ; Initialize your agents here.
-  set spawn? True
   set stop_driving_at_next_stop? False
   set capacity get-capacity
   set passenger_routes []
   set fixed_route []
   set route_id -1
-  set tick_of_vote_request 0
+  set birth_tick ticks
+  
+  ; outstanding_vote -> [tick_of_request issue_under_consideration]
+  set outstanding_vote [0 ""]
+  
   init-beliefs
 
   if member? bus_id initial-fleet [
@@ -55,12 +60,14 @@ end
 to request-bus-on-route [ new_route_id new_bus_capacity]
   let available_bus_ids idle-bus-with-capacity new_bus_capacity
   if length available_bus_ids > 0 [
-    let bus_to_aks first available_bus_ids
+    let bus_to_ask first available_bus_ids
 
     ; send request message to one of the waiting buses
     let request_body (list (word "assign-to-route " new_route_id))
     let request_msg_fixed build-message "request" request_body
-    send-message bus_to_aks request_msg_fixed
+    send-message bus_to_ask request_msg_fixed
+    
+    show (word ticks " assign-to-route " bus_to_ask)
   ]
 end
 
@@ -83,7 +90,6 @@ to request-flexible-bus [ratio]
    set new_bus_capacity 150
   ]
   
-  show (word "Requested " new_bus_capacity " at " ratio)
   ; determine which buses can become a new flexible bus of the type determined above
   let available_bus_ids idle-bus-with-capacity new_bus_capacity
 
@@ -122,7 +128,8 @@ to init-beliefs
   set beliefs table:make
 
   table:put beliefs "bus-spec" []
-  table:put beliefs "capacity-vote" []
+  table:put beliefs "vote-to-stop" []
+  table:put beliefs "vote-to-spawn" []
 end
 
 ;;; TODO: I belief this function can be re-purposed. We drop off all passengers at each stop, so if
@@ -226,6 +233,7 @@ to execute-actions
 end
 
 to principle-agent-delegation
+  show random 10
     ; bus 24 checks if new flexible buses are needed everey 3 ticks
     if ticks mod 3 = 0 [
 
@@ -234,28 +242,27 @@ to principle-agent-delegation
       if ratio > green_bus_ratio [
         ;New flexible bus is needed
         request-flexible-bus ratio
-        show "new flex bus is needed"
       ]
     ]
     
     
     ; bus 24 checks if there is an auction needed to aid one of the bus-stations
-    if ticks mod 10 = 0 [
+    ;if ticks mod 10 = 0 [
       
       ; A variable that stores the id's of busstations that need help
-      let stops_need_help bus-stops-that-need-help
+    ;  let stops_need_help bus-stops-that-need-help
       
       ; If there are bus_stops that need help, start an auction
-      if length stops_need_help > 0[
+    ;  if length stops_need_help > 0[
         
         ; Start an auction for all bus stops that are crowded
-        foreach stops_need_help[
-          start-auction ?
-        ]
+    ;    foreach stops_need_help[
+    ;      start-auction ?
+    ;    ]
          
-      ]
+    ;  ]
       
-    ]
+    ;]
 end
 
 
@@ -327,6 +334,12 @@ end
 
 ; message = [ ticks sender [ performative content ] ]
 to process-inbox
+  
+  ; move all inform-like messages to the front of the queue
+  let inform_messages filter [ member? "inform" (first last ?) ] inbox
+  let not_inform_messages filter [ not member? "inform" (first last ?) ] inbox
+  set inbox sentence inform_messages not_inform_messages
+  
   while [not empty? inbox] [
     
     let message first inbox
@@ -356,7 +369,7 @@ to process-inbox
         agree-to-request sender
         run action
       ][
-        fail-on-request sender "Not able to perform this action"
+        fail-on-request sender (word "Not able to perform " action " for " sender)
       ]
     ]
 
@@ -371,7 +384,7 @@ end
 
 to fail-on-request [ requester_id reason ]
   let content build-message "failure" reason
-  show content
+  show (word ticks " " content)
   send-message requester_id content
 end
 
@@ -389,18 +402,21 @@ to stop-driving
 end
 
 to fixed-bus-behaviour
-  
-  ; TODO: Think of better timing to request vote, every tick is very costly for messages
-  if empty? bus_passengers [
-    request-vote-on-fixed-route-capacity
-    set tick_of_vote_request ticks
-  ]
-  
-  ; Bus should wait three ticks before counting the votes
+  ; Bus should wait three ticks before counting the votes.
   ; check has to be performed every tick otherwise the chance of
   ; this condition being true is very low.
+  
+  ; Gather information on outstanding vote
+  let tick_of_vote_request first outstanding_vote
+  let issue_of_vote last outstanding_vote
+  
   if tick_of_vote_request > 0 and ticks = tick_of_vote_request + 3 [
-    count-votes-on-capacity
+    if issue_of_vote = "vote-to-stop" and count-votes "vote-to-stop" 0 [
+      set stop_driving_at_next_stop? true
+    ]
+    if issue_of_vote = "vote-to-spawn" and count-votes "vote-to-spawn" 1 [
+      request-bus-on-route route_id 60
+    ]
   ]
   
   ; Every station, the bus decides where to go next.
@@ -423,13 +439,18 @@ to fixed-bus-behaviour
     ; - Length of route
     ; - Capacity
     ; -
-    if full? and spawn? [
-      request-bus-on-route route_id 150
-      set spawn? false
+    if full? [
+      request-vote-to-spawn
+    ]
+    
+    if empty? bus_passengers [
+      request-vote-to-stop
     ]
   ]
     
 end
+
+
 
 to flexible-bus-behaviour
   if current_stop > -1 [
@@ -515,38 +536,51 @@ to vote-next-stop
   pick-up-passengers
 end
 
-to request-vote-on-fixed-route-capacity
-  let current_state table:get beliefs "bus-spec"
-  ; filter bus-spec belief on buses on your route and extract the bus_id from those bus-specs
-  let buses_on_my_route map [ first ? ] filter [ last ? = route_id ] current_state
-
+to request-vote-to-stop
   ; send request to vote to all buses on the route
-  foreach buses_on_my_route [
-    let request_body (list (word "vote-under-capacity " bus_id))
+  foreach buses-on-my-route [
+    let request_body (list (word "vote-to-stop " bus_id))
     let request_msg build-message "request" request_body
     send-message ? request_msg
   ]
+  
+  set outstanding_vote (list ticks "vote-to-stop")
 end
 
-to count-votes-on-capacity
-  let votes map [ last ? ] table:get beliefs "capacity-vote"
-  
-  ; the bus that requests the votes always votes against.
-  ; This way it will never stop driving if it is the last bus
-  set votes fput 0 votes
-  let votes_for sum votes
-  let votes_against (length votes) - votes_for
-  if votes_for > votes_against [
-    set stop_driving_at_next_stop? True
-    show "stopped driving after vote"
+to request-vote-to-spawn
+  ; send request to vote to all buses on the route
+  foreach buses-on-my-route [
+    let request_body (list (word "vote-to-spawn " bus_id))
+    let request_msg build-message "request" request_body
+    send-message ? request_msg
   ]
   
-  table:put beliefs "capacity-vote" []
+  set outstanding_vote (list ticks "vote-to-spawn")
 end
 
-;;;;;; VOTE-ON-CAPACITY
-to vote-under-capacity [ b_id ]
-  let msg_content (list "capacity-vote" (list bus_id under-capacity-vote))
+; Count the votes received in beliefs{belief_name}
+; belief_name -> name of issue (eg. vote-to-spawn)
+; my_vote     -> counting bus' vote on the matter
+to-report count-votes [ belief_name my_vote ]
+  let votes map [ last ? ] table:get beliefs belief_name
+  
+  set votes fput my_vote votes
+  let votes_for sum votes
+  let votes_against (length votes) - votes_for
+  
+  ; empty vote list
+  table:put beliefs belief_name []
+  
+  report votes_for > votes_against
+end
+
+;;;;;; VOTE-TO-STOP
+to vote-to-stop [ b_id ]
+  
+  let vote 0
+  if length bus_passengers / capacity < 0.5 [ set vote 1 ]
+  
+  let msg_content (list "vote-to-stop" (list bus_id vote))
   let message build-message "inform" msg_content
   send-message b_id message
 end
@@ -554,19 +588,29 @@ end
 ; There are no conditions on the ability to cast a vote
 ; (only active buses on a specific route are asked to vote)
 ; b_id -> bus id of the bus that requested the vote
-to-report can-vote-under-capacity [ b_id ]
+to-report can-vote-to-stop [ b_id ]
   report true
 end
-;;;; END VOTE-ON-CAPACITY
+;;;; END VOTE-TO-STOP
 
-to-report under-capacity-vote
+;;;;; VOTE-TO-SPAWN
+to vote-to-spawn [ b_id ]
+  
   let vote 0
-
-  if length bus_passengers / capacity < 0.5 [ set vote 1 ]
-
-  report vote
+  if length bus_passengers / capacity > 0.8 [ set vote 1 ]
+  
+  let msg_content (list "vote-to-spawn" (list bus_id vote))
+  let message build-message "inform" msg_content
+  send-message b_id message
 end
 
+; There are no conditions on the ability to cast a vote
+; (only active buses on a specific route are asked to vote)
+; b_id -> bus id of the bus that requested the vote
+to-report can-vote-to-spawn [ b_id ]
+  report true
+end
+;;;; END VOTE-TO-SPAWN
 
 ;;;;;;; ASSIGN-TO-ROUTE
 ;;procedure and reporter belong together
@@ -623,6 +667,10 @@ end
 ;; Difference with announce-birth is that this message doens't ask for a message back
 ;; AND it is sent to ALL buses.
 to broadcast-reassignment
+  if bus_id > 0 [ 
+    show (word ticks " " all-buses-i-know)
+    show (word ticks " " inbox)
+  ]
   foreach all-buses-i-know [
     let msg_content (list "bus-spec" bus-spec)
     let message build-message "inform" msg_content

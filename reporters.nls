@@ -52,6 +52,12 @@ to-report all-buses-i-know
   report bus_ids
 end
 
+to-report buses-on-my-route
+  let current_state table:get beliefs "bus-spec"
+  ; filter bus-spec belief on buses on your route and extract the bus_id from those bus-specs
+  report map [ first ? ] filter [ last ? = route_id ] current_state
+end
+
 ;;;;; Logic for handling bus-routes
 ;; Report which route this bus has to take
 to-report get-route
@@ -121,8 +127,6 @@ end
 to-report can-perform [ action ]
   report runresult (word "can-" action)
 end
-
-
 
 ; Calculates when a new flexible bus needs to start driving
 to-report waiting-capacity-ratio
