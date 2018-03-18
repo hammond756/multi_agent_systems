@@ -296,7 +296,7 @@ to start-auction [bus-stop-id]
     let temproute item 2 temp_bus
     
     ; if flex or idle bus and capacity is medium or large, add id to message list
-    if (temproute = -1 or temproute = 8) and (temp_capacity = 150 or temp_capacity = 60)[
+    if (temproute = -1 or temproute = 8) and (temp_capacity = 150 or temp_capacity = 60) [
       
       ; add to list
       set send_message_to lput temp_bus_id send_message_to
@@ -387,6 +387,7 @@ end
 to go-to-crowded-stop [crowded-bus-stop]
   
  
+  assign-to-route 8
   
   let route []
   let from_stop current_stop
@@ -412,7 +413,9 @@ end
 
 to-report can-go-to-crowded-stop [crowded-bus-stop]
   ; If you are not assigned yet
-  report length(temp_route) = 0
+  ; Buses are initialized with route_style 0 (these buses don't really exist yet, just a technicality)
+  ; Idle buses have route_style ""
+  report length(temp_route) = 0 and route-style != 0
 end
 
 ;;;; COMMUNICATION
@@ -463,7 +466,8 @@ end
 
 to fail-on-request [ requester_id reason ]
   let content build-message "failure" reason
-  show content
+  if route-style != 0 [ show content ]
+
   send-message requester_id content
 end
 
@@ -526,19 +530,21 @@ to flexible-bus-behaviour
   if current_stop > -1 [
  
     ; if the flexible bus won an auction
-    if length temp_route > 0[
+    if length temp_route > 1 [
       ; set next stop
       show word "I won an auction, I'm going to " temp_route 
-      if length temp_route > 1[
-        set next_stop next-stop-on-route temp_route
-      ]
-      
-      
+      set next_stop next-stop-on-route temp_route
+
       ; Empty temp_route when traversing the final edge to the destination
-      if next_stop = last temp_route[
+      if next_stop = last temp_route [
         set temp_route []
       ]
       ; don't do the standard flex-bus behaviour
+      stop
+    ]
+    ; In this case you're already on your way to the auctioned stop
+    if length temp_route = 1 [ 
+      set temp_route [] 
       stop
     ]
     
