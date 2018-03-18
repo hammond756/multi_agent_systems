@@ -189,3 +189,9 @@ to-report bus-stops-that-need-help
   report crowded-stops
 end
 
+to-report distance-between-bus-stops[bs1 bs2]
+  ; bs1 is the id of bus_stop 1 and bs2 of 2
+  let dist 0
+  ask bus_stop bs1 [set dist nw:weighted-distance-to bus_stop bs2 "route_size"]
+  report dist
+end

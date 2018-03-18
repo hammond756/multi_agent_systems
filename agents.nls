@@ -20,7 +20,7 @@ buses-own [
   spawn?
   temp_route
   beliefs
-  route-style ;  TODO maybe create a new 'fixed route' -> ROUTE 8, which is the flexible style route
+  route-style ;  fixed or flexible
   tick_of_vote_request
   stop_driving_at_next_stop?
 ]
@@ -258,7 +258,6 @@ end
 
 ;Auction 
 to start-auction [bus-stop-id]
-
   
   ; Get current beliefs about the buses
   let current_state_beliefs table:get beliefs "bus-spec"
@@ -275,18 +274,47 @@ to start-auction [bus-stop-id]
     let temp_capacity item 1 temp_bus
     let temproute item 2 temp_bus
     
-    ; if flex or idle bus and capacity is medium or large, add to message list
+    ; if flex or idle bus and capacity is medium or large, add id to message list
     if (temproute = -1 or temproute = 8) and (temp_capacity = 150 or temp_capacity = 60)[
-      ; or .... and ....
       
       ; add to list
-
+      set send_message_to lput temp_bus_id send_message_to
       ]
   ]
   
+  ; send request
+  foreach send_message_to [
+    
+    ; request the buses to perform the function 'send-auction-bid'
+    let request_body (list (word "send-auction-bid " bus_id " " bus-stop-id))
+    let request_msg build-message "request" request_body
+    
+    ; send message to bus id, the message is: request_msg
+    send-message ? request_msg
+  ]
   
 end
 
+;Function to answer the request of a bus for a auction bid. Answers with a bid
+to send-auction-bid [b_id bs-id]
+  
+  ; variables for the bidding function
+  let net_capacity capacity - length(bus_passengers)
+  
+  ; distance to bus_stop is meassured by a proxy: i.e. the distance between the next_stop
+  ; and the crowded bus-stop 
+ ; let distance_to_bus_stop 
+  
+  ; distance => loop door het shortest path en tel alle distances (get-distance) bijelkaar op
+  ; TODO vragen of we dit globaal mogen maken
+  
+  ; TODO The bidding function
+end
+
+to-report can-send-auction-bid [b_id]
+  report true
+end
+; 
 ; TODO process auction results
 
 ;;;; COMMUNICATION
