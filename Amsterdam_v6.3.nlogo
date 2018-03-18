@@ -900,7 +900,7 @@ average_travelling_time
 MONITOR
 1097
 504
-1336
+1337
 549
 Number of Passengers Waiting for a Bus
 amount_passengers_waiting
@@ -1031,6 +1031,51 @@ false
 "set-plot-x-range 0 7\nset-plot-pen-mode 1\nset-histogram-num-bars 7" ""
 PENS
 "default" 1.0 0 -16777216 true "" "histogram [ route_id ] of buses"
+
+SLIDER
+1185
+15
+1218
+165
+green_bus_ratio
+green_bus_ratio
+0
+10
+0.5
+0.1
+1
+NIL
+VERTICAL
+
+SLIDER
+1228
+15
+1261
+165
+yellow_bus_ratio
+yellow_bus_ratio
+0
+10
+0.5
+0.1
+1
+NIL
+VERTICAL
+
+SLIDER
+1270
+15
+1303
+165
+red_bus_ratio
+red_bus_ratio
+0
+10
+1.7
+0.1
+1
+NIL
+VERTICAL
 
 @#$#@#$#@
 ## WHAT IS IT?

@@ -70,18 +70,20 @@ end
 ; when the ratio total passengers waiting / capacity of fleet > 1
 to request-flexible-bus [ratio]
 
-  ;TODO ratio must be capacity fleet - people waiting
+  ;TODO ratio must be capacity fleet / people waiting
 
   ; determine bus type
   let new_bus_capacity 12
 
-  if (ratio > 2.5) and (ratio < 5) [
+  if (ratio > yellow_bus_ratio) and (ratio < red_bus_ratio) [
     set new_bus_capacity 60
   ]
 
-  if ratio >= 5[
+  if ratio >= red_bus_ratio [
    set new_bus_capacity 150
   ]
+  
+  show (word "Requested " new_bus_capacity " at " ratio)
   ; determine which buses can become a new flexible bus of the type determined above
   let available_bus_ids idle-bus-with-capacity new_bus_capacity
 
@@ -200,6 +202,12 @@ to execute-actions
 
   ; Go trough inbox to ensure up to date mental state
   process-inbox
+  
+  ; Let bus 24 delegete some tasks
+  if bus_id = 24 [
+    principle-agent-delegation
+  ]
+
 
   ; Unassigned busses just read their messages
   if not (route_id > -1) [ stop ]
@@ -210,15 +218,20 @@ to execute-actions
   if route-style = "fixed" [ fixed-bus-behaviour ]
   if route-style = "flexible" [ flexible-bus-behaviour ]
 
+  ; go towards the next stop
+  travel-to next_stop
 
-  if bus_id = 24 [
-    
+  ; if bus reaches last stop, turn around (TODO: if-statement outside of procedure?)
+  turn-around
+end
+
+to principle-agent-delegation
     ; bus 24 checks if new flexible buses are needed everey 3 ticks
     if ticks mod 3 = 0 [
 
       let ratio waiting-capacity-ratio
       ; If the
-      if ratio > 0.5 [
+      if ratio > green_bus_ratio [
         ;New flexible bus is needed
         request-flexible-bus ratio
         show "new flex bus is needed"
@@ -243,13 +256,6 @@ to execute-actions
       ]
       
     ]
-  ]
-
-  ; go towards the next stop
-  travel-to next_stop
-
-  ; if bus reaches last stop, turn around (TODO: if-statement outside of procedure?)
-  turn-around
 end
 
 
@@ -377,6 +383,9 @@ to stop-driving
   set route_id -1
   set fixed_route (list)
   set route-style ""
+  
+  ; let the fleet know you are idle 
+  broadcast-reassignment
 end
 
 to fixed-bus-behaviour
@@ -426,7 +435,7 @@ to flexible-bus-behaviour
   if current_stop > -1 [
     vote-next-stop
   ]
-  ;if waiting-capacity-ratio < 0.5 [ stop-driving ]
+  if waiting-capacity-ratio < green_bus_ratio [ set stop_driving_at_next_stop? True ]
 end
 
 ;;;;;;; VOTING
@@ -584,7 +593,7 @@ to assign-to-route [ new_route_id ]
     broadcast-reassignment
     
     ;TODO NIET MEER ALTIJD NIEUWE BUS TOEVOEGEN
-     add-bus bus_type
+    add-bus bus_type
   ]
 end
 ; check condition on which bus is able to assign itself to a new route
@@ -612,8 +621,9 @@ to announce-birth
 end
 
 ;; Difference with announce-birth is that this message doens't ask for a message back
+;; AND it is sent to ALL buses.
 to broadcast-reassignment
-  foreach buses-older-than-me [
+  foreach all-buses-i-know [
     let msg_content (list "bus-spec" bus-spec)
     let message build-message "inform" msg_content
     send-message ? message
@@ -628,6 +638,8 @@ to add-belief [ new_belief ]
 
   if belief_name = "bus-spec" [
     let b_id first value
+    
+    ; remove the belief on bus with b_id
     set current_state filter [ first ? != b_id ] current_state
   ]
 
