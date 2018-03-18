@@ -345,7 +345,7 @@ to send-auction-bid [bs-id]
 end
 
 to-report can-send-auction-bid [bs-id]
-  report true
+  report route-style != 0
 end
 
 
