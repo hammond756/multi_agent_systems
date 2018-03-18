@@ -351,9 +351,6 @@ end
 
 ; Bus 24 has to check which bus submitted the highest bid and inform that bus to go and help
 to process-auction [crowded_stop]
-  ; TODO, process it PER go to bus-station
-  
-  show word "processing auction for: " crowded_stop
   ; init
   let highest_bid -1
   let id_winner -1
@@ -383,7 +380,6 @@ to process-auction [crowded_stop]
   show all_bids
   show highest_bid
   show id_winner
-  show "I processed the auction"
 
 end
 
@@ -403,7 +399,10 @@ to go-to-crowded-stop [crowded-bus-stop]
   
   
   set route get-shortest-path-to from_stop crowded-bus-stop 
-
+  ask bus_stop from_stop[
+    set route map [ [who] of ? ] nw:turtles-on-weighted-path-to bus_stop crowded-bus-stop "route_size"
+  ]
+  
   ; set temp route to route
   set temp_route route
   
@@ -449,7 +448,7 @@ to process-inbox
         agree-to-request sender
         run action
       ][
-        fail-on-request sender "Not able to perform this action"
+        fail-on-request sender (word "Not able to perform " action " for " sender)
       ]
     ]
 
@@ -522,19 +521,27 @@ end
 
 to flexible-bus-behaviour
   
-  ; if the flexible bus won an auction
-  if length temp_route > 0[
-    ; set next stop
-    set next_stop item 0 temp_route
-    
-    ; delete next-stop from temp_route
-    set temp_route but-first temp_route
-    
-    ; don't do the standard flex-bus behaviour
-    stop
-  ]
+
   
   if current_stop > -1 [
+ 
+    ; if the flexible bus won an auction
+    if length temp_route > 0[
+      ; set next stop
+      show word "I won an auction, I'm going to " temp_route 
+      if length temp_route > 1[
+        set next_stop next-stop-on-route temp_route
+      ]
+      
+      
+      ; Empty temp_route when traversing the final edge to the destination
+      if next_stop = last temp_route[
+        set temp_route []
+      ]
+      ; don't do the standard flex-bus behaviour
+      stop
+    ]
+    
     vote-next-stop
   ]
   if waiting-capacity-ratio < green_bus_ratio [ set stop_driving_at_next_stop? True ]

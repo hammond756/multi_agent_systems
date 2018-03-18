@@ -1056,7 +1056,7 @@ yellow_bus_ratio
 yellow_bus_ratio
 0
 10
-0.5
+0.8
 0.1
 1
 NIL
@@ -1071,7 +1071,7 @@ red_bus_ratio
 red_bus_ratio
 0
 10
-1.7
+2.1
 0.1
 1
 NIL
