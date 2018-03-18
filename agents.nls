@@ -181,16 +181,6 @@ to pick-up-passengers
 
 end
 
-;; Flip the route when the last stop is reached for fixed route buses
-to turn-around
-  ; skip when there is no route to ride
-  if length fixed_route < 1 [ stop ]
-
-  if current_stop = last fixed_route [
-    set fixed_route reverse fixed_route
-  ]
-end
-
 to execute-actions
   ; Add decision making strategies for your agents here.
   ; You are allowed to use the global variable 'ticks'.
@@ -225,9 +215,6 @@ to execute-actions
 
   ; go towards the next stop
   travel-to next_stop
-
-  ; if bus reaches last stop, turn around (TODO: if-statement outside of procedure?)
-  turn-around
 end
 
 to principle-agent-delegation
@@ -381,7 +368,7 @@ end
 
 to fail-on-request [ requester_id reason ]
   let content build-message "failure" reason
-  show (word ticks " " content)
+  ;show (word ticks " " content)
   send-message requester_id content
 end
 
@@ -419,6 +406,10 @@ to fixed-bus-behaviour
   ; Every station, the bus decides where to go next.
   if current_stop > -1 [
     ifelse member? current_stop fixed_route [
+      ;; Flip the route when the last stop is reached
+      if current_stop = last fixed_route [
+        set fixed_route reverse fixed_route
+      ]
       set next_stop next-stop-on-route fixed_route
       
       ; Only handle passengers on designated route, otherwise the transit system breaks.
