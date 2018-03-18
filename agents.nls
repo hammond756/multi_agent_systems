@@ -39,6 +39,7 @@ to init-buses
   set fixed_route []
   set temp_route []
   set route_id -1
+  set route-style 0
   set tick_of_vote_request 0
   set tick_of_auction_request 0
   set stops_with_outstanding_auctions[]
@@ -88,7 +89,6 @@ to request-flexible-bus [ratio]
    set new_bus_capacity 150
   ]
   
-  show (word "Requested " new_bus_capacity " at " ratio)
   ; determine which buses can become a new flexible bus of the type determined above
   let available_bus_ids idle-bus-with-capacity new_bus_capacity
 
@@ -240,7 +240,6 @@ to principle-agent-delegation
       if ratio > green_bus_ratio [
         ;New flexible bus is needed
         request-flexible-bus ratio
-        show "new flex bus is needed"
       ]
     ]
     
@@ -367,20 +366,18 @@ to process-auction [crowded_stop]
     ]
   ]
   
-  ; Send a message to the winner of the auction with the request to go to the 
-  ; crowded bus station
-  let request_body (list (word "go-to-crowded-stop " crowded_stop))
-  let request_msg build-message "request" request_body
-  send-message id_winner request_msg
+  if length all_bids > 0 [
+    ; Send a message to the winner of the auction with the request to go to the 
+    ; crowded bus station
+    let request_body (list (word "go-to-crowded-stop " crowded_stop))
+    let request_msg build-message "request" request_body
+    send-message id_winner request_msg
+  ]
   
   
   ; remove the crowded stop from list of outstanding auctions
+  ; TODO: check of dit goed gaat, 'remove' is ook een optie.
   set stops_with_outstanding_auctions but-first stops_with_outstanding_auctions
-  
-  show all_bids
-  show highest_bid
-  show id_winner
-
 end
 
 ; let the bus that won the auction, go to the crowded station
@@ -396,8 +393,6 @@ to go-to-crowded-stop [crowded-bus-stop]
   if from_stop = -1[
     set from_stop next_stop
   ]
-  
-  
   
   set route get-shortest-path-to from_stop crowded-bus-stop 
   ask bus_stop from_stop[
@@ -504,15 +499,11 @@ to fixed-bus-behaviour
     ifelse member? current_stop fixed_route [
       set next_stop next-stop-on-route fixed_route
       
-      ; If the temp_route still has values, set it to an empty list
-      set temp_route []
-      
       ; Only handle passengers on designated route, otherwise the transit system breaks.
       drop-off-passengers
       pick-up-passengers
     ][
-    ; otherwise navigate to route
-    set next_stop next-stop-on-route temp_route
+      next-item-from-temp-route
     ]
     ; add new bus if necessary
     if full? and spawn? [
@@ -525,31 +516,18 @@ end
 
 to flexible-bus-behaviour
   
-
-  
   if current_stop > -1 [
- 
     ; if the flexible bus won an auction
-    if length temp_route > 1 [
-      ; set next stop
-      show word "I won an auction, I'm going to " temp_route 
-      set next_stop next-stop-on-route temp_route
-
-      ; Empty temp_route when traversing the final edge to the destination
-      if next_stop = last temp_route [
-        set temp_route []
-      ]
+    if length temp_route > 0 [
+      next-item-from-temp-route
+      
       ; don't do the standard flex-bus behaviour
-      stop
-    ]
-    ; In this case you're already on your way to the auctioned stop
-    if length temp_route = 1 [ 
-      set temp_route [] 
       stop
     ]
     
     vote-next-stop
   ]
+  
   if waiting-capacity-ratio < green_bus_ratio [ set stop_driving_at_next_stop? True ]
 end
 
@@ -628,6 +606,11 @@ to vote-next-stop
 
   ; (ONLY) pick up passengers that voted for that stop
   pick-up-passengers
+end
+
+to next-item-from-temp-route
+  set next_stop first temp_route
+  set temp_route but-first temp_route
 end
 
 to request-vote-on-fixed-route-capacity
