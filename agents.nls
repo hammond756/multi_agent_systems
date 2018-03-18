@@ -202,6 +202,12 @@ to execute-actions
 
   ; Go trough inbox to ensure up to date mental state
   process-inbox
+  
+  ; Let bus 24 delegete some tasks
+  if bus_id = 24 [
+    principle-agent-delegation
+  ]
+
 
   ; Unassigned busses just read their messages
   if not (route_id > -1) [ stop ]
@@ -212,9 +218,14 @@ to execute-actions
   if route-style = "fixed" [ fixed-bus-behaviour ]
   if route-style = "flexible" [ flexible-bus-behaviour ]
 
+  ; go towards the next stop
+  travel-to next_stop
 
-  if bus_id = 24 [
-    
+  ; if bus reaches last stop, turn around (TODO: if-statement outside of procedure?)
+  turn-around
+end
+
+to principle-agent-delegation
     ; bus 24 checks if new flexible buses are needed everey 3 ticks
     if ticks mod 3 = 0 [
 
@@ -245,13 +256,6 @@ to execute-actions
       ]
       
     ]
-  ]
-
-  ; go towards the next stop
-  travel-to next_stop
-
-  ; if bus reaches last stop, turn around (TODO: if-statement outside of procedure?)
-  turn-around
 end
 
 
