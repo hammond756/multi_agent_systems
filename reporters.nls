@@ -76,6 +76,7 @@ end
 
 ;; Report the shortest path a the bus' current stop to another stop
 to-report get-shortest-path-to [ bus_stop_id ]
+  ; TODO (op meerdere plekken) alles met weighted graph doen!!
   let route []
   ask bus_stop current_stop[
     set route map [ [who] of ? ] nw:turtles-on-path-to turtle bus_stop_id
@@ -185,7 +186,7 @@ to-report bus-stops-that-need-help
     let temp_waiting get-passengers-at-stop bus-stop-id
     
     ; if more than 150 people are waiting, mark as crowded bus-stop
-    if length(temp_waiting) > 150[
+    if length(temp_waiting) > 3[
       set crowded-stops fput bus-stop-id crowded-stops
     ]
   ]

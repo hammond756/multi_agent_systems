@@ -22,9 +22,9 @@ buses-own [
   route-style ;  fixed or flexible
   outstanding_vote
   stop_driving_at_next_stop?
-  
-  ; TODO: for debuggin purposes
   birth_tick
+  tick_of_auction_request
+  stops_with_outstanding_auctions
 ]
 
 globals [graph]
@@ -36,12 +36,15 @@ to init-buses
   set capacity get-capacity
   set passenger_routes []
   set fixed_route []
+  set temp_route []
   set route_id -1
+
   set birth_tick ticks
-  
+
   ; outstanding_vote -> [tick_of_request issue_under_consideration]
   set outstanding_vote [0 ""]
-  
+  set tick_of_auction_request 0
+  set stops_with_outstanding_auctions[]
   init-beliefs
 
   if member? bus_id initial-fleet [
@@ -71,7 +74,7 @@ end
 
 
 ; Runs when a new FLEXIBLE bus is requested
-; This is done by bus 
+; This is done by bus
 ; when the ratio total passengers waiting / capacity of fleet > 1
 to request-flexible-bus [ratio]
 
@@ -87,7 +90,7 @@ to request-flexible-bus [ratio]
   if ratio >= red_bus_ratio [
    set new_bus_capacity 150
   ]
-  
+
   ; determine which buses can become a new flexible bus of the type determined above
   let available_bus_ids idle-bus-with-capacity new_bus_capacity
 
@@ -126,8 +129,10 @@ to init-beliefs
   set beliefs table:make
 
   table:put beliefs "bus-spec" []
+
   table:put beliefs "vote-to-stop" []
   table:put beliefs "vote-to-spawn" []
+  table:put beliefs "auction-bid" [] ; TODO is dit nog nodig?
 end
 
 ;;; TODO: I belief this function can be re-purposed. We drop off all passengers at each stop, so if
@@ -197,7 +202,7 @@ to execute-actions
 
   ; Go trough inbox to ensure up to date mental state
   process-inbox
-  
+
   ; Let bus 24 delegete some tasks
   if bus_id = 24 [
     principle-agent-delegation
@@ -206,7 +211,7 @@ to execute-actions
 
   ; Unassigned busses just read their messages
   if not (route_id > -1) [ stop ]
-  
+
   if current_stop > -1 and stop_driving_at_next_stop? [ stop-driving ]
 
   ; Do route-style specific behaviour
@@ -218,114 +223,232 @@ to execute-actions
 end
 
 to principle-agent-delegation
-  ; bus 24 checks if new flexible buses are needed everey 3 ticks
-  if ticks mod 3 = 0 [
-    
-    let ratio waiting-capacity-ratio
-    ; If the
-    if ratio > green_bus_ratio [
-      ;New flexible bus is needed
-      request-flexible-bus ratio
+    ; bus 24 checks if new flexible buses are needed every 3 ticks
+    if ticks mod 3 = 0 [
+
+      let ratio waiting-capacity-ratio
+      ; If the
+      if ratio > green_bus_ratio [
+        ;New flexible bus is needed
+        request-flexible-bus ratio
+        show "new flex bus is needed"
+      ]
+    ]
+
+
+    ; bus 24 checks if there is an auction needed to aid one of the bus-stations
+    if ticks mod 10 = 0 [
+
+      ; A variable that stores the id's of busstations that need help
+      let stops_need_help bus-stops-that-need-help
+
+      ; If there are bus_stops that need help, start an auction
+      if length stops_need_help > 0[
+
+        ; Start an auction for all bus stops that are crowded
+        foreach stops_need_help[
+          table:put beliefs (word "auction-bid-" ?) []
+          start-auction ?
+          ;set the tick of the auction request at the current tick
+          set tick_of_auction_request ticks
+          set stops_with_outstanding_auctions lput ? stops_with_outstanding_auctions
+        ]
+
+      ]
+
+    ]
+
+    ;check if the auction can be counted (3 ticks after it was requested)
+    if tick_of_auction_request > 0 and ticks = tick_of_auction_request + 3[
+     foreach stops_with_outstanding_auctions[
+       process-auction ?
+     ]
     ]
   ]
-  
-  
+
+
   ; bus 24 checks if there is an auction needed to aid one of the bus-stations
   ;if ticks mod 10 = 0 [
-  
+
   ; A variable that stores the id's of busstations that need help
   ;  let stops_need_help bus-stops-that-need-help
-  
+
   ; If there are bus_stops that need help, start an auction
   ;  if length stops_need_help > 0[
-  
+
   ; Start an auction for all bus stops that are crowded
   ;    foreach stops_need_help[
   ;      start-auction ?
   ;    ]
-  
+
   ;  ]
-  
+
   ;]
 end
 
 
 
 ;;; COMPETITION
-
-;Auction 
 to start-auction [bus-stop-id]
-  
+
   ; Get current beliefs about the buses
   let current_state_beliefs table:get beliefs "bus-spec"
-  
-  ; Variable to store IDs of all medium and large buses that are not 
+
+  ; Variable to store IDs of all medium and large buses that are not
   ; assigned to a fixed route (i.e. flex or idle)
   let send_message_to []
-  
+
   ; for all buses
   foreach current_state_beliefs[
-    
+
     let temp_bus ?
     let temp_bus_id item 0 temp_bus
     let temp_capacity item 1 temp_bus
     let temproute item 2 temp_bus
-    
+
     ; if flex or idle bus and capacity is medium or large, add id to message list
     if (temproute = -1 or temproute = 8) and (temp_capacity = 150 or temp_capacity = 60)[
-      
+
       ; add to list
       set send_message_to lput temp_bus_id send_message_to
       ]
   ]
-  
+
   ; send request
   foreach send_message_to [
-    
+
     ; request the buses to perform the function 'send-auction-bid'
-    let request_body (list (word "send-auction-bid " bus_id " " bus-stop-id))
+    let request_body (list (word "send-auction-bid " bus-stop-id))
     let request_msg build-message "request" request_body
-    
+
     ; send message to bus id, the message is: request_msg
     send-message ? request_msg
   ]
-  
+
 end
 
 ;Function to answer the request of a bus for a auction bid. Answers with a bid
-to send-auction-bid [b_id bs-id]
-  
-  ; variables for the bidding function
+to send-auction-bid [bs-id]
+
+  ; Variables for the bidding function
   let net_capacity capacity - length(bus_passengers)
-  
-  ; distance to bus_stop is meassured by a proxy: i.e. the distance between the next_stop
-  ; and the crowded bus-stop 
- ; let distance_to_bus_stop 
-  
-  ; distance => loop door het shortest path en tel alle distances (get-distance) bijelkaar op
-  ; TODO vragen of we dit globaal mogen maken
-  
-  ; TODO The bidding function
+
+  ; Distance to bus_stop is meassured by a proxy: i.e. the distance between the next_stop
+  ; and the crowded bus-stop
+  let bs1 bs-id
+  let bs2 next_stop
+
+  ; if next stop is empty, use current stop
+  if bs2 < 0[
+    set bs2 current_stop
+  ]
+
+  let distance_to_bus_stop distance-between-bus-stops bs1 bs2
+
+  ; Bid
+  let bid (1 / (distance_to_bus_stop + 0.000000000000001) * net_capacity)
+
+
+  ; Send the bid to bus 24 so he can process all bids
+  let msg_content (list (word "auction-bid-" bs-id) (list bus_id bid))
+  let message build-message "inform" msg_content
+  send-message 24 message
 end
 
-to-report can-send-auction-bid [b_id]
+to-report can-send-auction-bid [bs-id]
   report true
 end
-; 
-; TODO process auction results
+
+
+; Bus 24 has to check which bus submitted the highest bid and inform that bus to go and help
+to process-auction [crowded_stop]
+  ; TODO, process it PER go to bus-station
+
+  show word "processing auction for: " crowded_stop
+  ; init
+  let highest_bid -1
+  let id_winner -1
+  let all_bids table:get beliefs word "auction-bid-" crowded_stop
+
+  ; go through all bids and check which one is the highest
+  foreach all_bids[
+    let bid item 1 ?
+    let b_id item 0 ?
+
+    if bid > highest_bid [
+      set id_winner b_id
+      set highest_bid bid
+    ]
+  ]
+
+  ; Send a message to the winner of the auction with the request to go to the
+  ; crowded bus station
+  let request_body (list (word "go-to-crowded-stop " crowded_stop))
+  let request_msg build-message "request" request_body
+  send-message id_winner request_msg
+
+
+  ; remove the crowded stop from list of outstanding auctions
+  set stops_with_outstanding_auctions but-first stops_with_outstanding_auctions
+
+  show all_bids
+  show highest_bid
+  show id_winner
+  show "I processed the auction"
+
+end
+
+; let the bus that won the auction, go to the crowded station
+to go-to-crowded-stop [crowded-bus-stop]
+
+
+
+
+  ;TODO, dit werkt niet
+  ;TODO, werk met weighted shit
+
+
+
+
+
+
+  let route []
+  let from_stop -1
+
+  ; if not in between bus_stops: go from current_stop, else from next_stop
+  ifelse current_stop > -1[
+    set from_stop current_stop]
+   [set from_stop next_stop]
+
+
+  ask bus_stop from_stop[
+    set route map [ [who] of ? ] nw:turtles-on-path-to turtle crowded-bus-stop
+  ]
+
+  ; set temp route to route
+  set temp_route route
+
+  show word "Im going to help bus stop: " crowded-bus-stop
+end
+
+
+to-report can-go-to-crowded-stop [crowded-bus-stop]
+  ; If you are not assigned yet
+  report length(temp_route) = 0
+end
 
 ;;;; COMMUNICATION
 
 ; message = [ ticks sender [ performative content ] ]
 to process-inbox
-  
+
   ; move all inform-like messages to the front of the queue
   let inform_messages filter [ member? "inform" (first last ?) ] inbox
   let not_inform_messages filter [ not member? "inform" (first last ?) ] inbox
   set inbox sentence inform_messages not_inform_messages
-  
+
   while [not empty? inbox] [
-    
+
     let message first inbox
     let time item 0 message
     let sender item 1 message
@@ -380,20 +503,20 @@ to stop-driving
   set route_id -1
   set fixed_route (list)
   set route-style ""
-  
-  ; let the fleet know you are idle 
+
+  ; let the fleet know you are idle
   broadcast-reassignment
 end
 
 to fixed-bus-behaviour
-  ; Bus should wait three ticks before counting the votes.
-  ; check has to be performed every tick otherwise the chance of
+  ; Bus should wait three ticks before counting the votes
+  ; check has to be performed every tick otherwise the probability of
   ; this condition being true is very low.
-  
+
   ; Gather information on outstanding vote
   let tick_of_vote_request first outstanding_vote
   let issue_of_vote last outstanding_vote
-  
+
   if tick_of_vote_request > 0 and ticks = tick_of_vote_request + 3 [
     if issue_of_vote = "vote-to-stop" and count-votes "vote-to-stop" 0 [
       set stop_driving_at_next_stop? true
@@ -402,7 +525,7 @@ to fixed-bus-behaviour
       request-bus-on-route route_id 60
     ]
   ]
-  
+
   ; Every station, the bus decides where to go next.
   if current_stop > -1 [
     ifelse member? current_stop fixed_route [
@@ -411,7 +534,10 @@ to fixed-bus-behaviour
         set fixed_route reverse fixed_route
       ]
       set next_stop next-stop-on-route fixed_route
-      
+
+      ; If the temp_route still has values, set it to an empty list
+      set temp_route []
+
       ; Only handle passengers on designated route, otherwise the transit system breaks.
       drop-off-passengers
       pick-up-passengers
@@ -427,20 +553,35 @@ to fixed-bus-behaviour
     ; - Length of route
     ; - Capacity
     ; -
+
+    ; TODO: Check volgorde, volgensmij had ik dit verplaatst
     if full? [
       request-vote-to-spawn
     ]
-    
+
     if empty? bus_passengers [
       request-vote-to-stop
     ]
   ]
-    
+
 end
 
 
 
 to flexible-bus-behaviour
+
+  ; if the flexible bus won an auction
+  if length temp_route > 0[
+    ; set next stop
+    set next_stop item 0 temp_route
+
+    ; delete next-stop from temp_route
+    set temp_route but-first temp_route
+
+    ; don't do the standard flex-bus behaviour
+    stop
+  ]
+
   if current_stop > -1 [
     vote-next-stop
   ]
@@ -488,7 +629,7 @@ to vote-next-stop
 
   ; Next stop is stop with the most votes (majority vote)
   let next_bus_destination modes votes
-  
+
   ; If no passengers at stop left (all passengers arrived at destination)
   ; Choose next stop randomly from adjacent bus stops
   if length next_bus_destination = 0 [
@@ -531,7 +672,7 @@ to request-vote-to-stop
     let request_msg build-message "request" request_body
     send-message ? request_msg
   ]
-  
+
   set outstanding_vote (list ticks "vote-to-stop")
 end
 
@@ -542,7 +683,7 @@ to request-vote-to-spawn
     let request_msg build-message "request" request_body
     send-message ? request_msg
   ]
-  
+
   set outstanding_vote (list ticks "vote-to-spawn")
 end
 
@@ -551,23 +692,23 @@ end
 ; my_vote     -> counting bus' vote on the matter
 to-report count-votes [ belief_name my_vote ]
   let votes map [ last ? ] table:get beliefs belief_name
-  
+
   set votes fput my_vote votes
   let votes_for sum votes
   let votes_against (length votes) - votes_for
-  
+
   ; empty vote list
   table:put beliefs belief_name []
-  
+
   report votes_for > votes_against
 end
 
 ;;;;;; VOTE-TO-STOP
 to vote-to-stop [ b_id ]
-  
+
   let vote 0
   if length bus_passengers / capacity < 0.5 [ set vote 1 ]
-  
+
   let msg_content (list "vote-to-stop" (list bus_id vote))
   let message build-message "inform" msg_content
   send-message b_id message
@@ -583,10 +724,10 @@ end
 
 ;;;;; VOTE-TO-SPAWN
 to vote-to-spawn [ b_id ]
-  
+
   let vote 0
   if length bus_passengers / capacity > 0.8 [ set vote 1 ]
-  
+
   let msg_content (list "vote-to-spawn" (list bus_id vote))
   let message build-message "inform" msg_content
   send-message b_id message
@@ -609,7 +750,7 @@ to assign-to-route [ new_route_id ]
   if can-assign-to-route new_route_id [
     set route_id new_route_id
     set stop_driving_at_next_stop? False
-    
+
     ; if fixed route bus
     if route_id != 8 [
       set fixed_route get-route
@@ -621,9 +762,9 @@ to assign-to-route [ new_route_id ]
     if route_id = 8 [
       set route-style "flexible"
     ]
-    
+
     broadcast-reassignment
-    
+
     ;TODO NIET MEER ALTIJD NIEUWE BUS TOEVOEGEN
     add-bus bus_type
   ]
@@ -672,7 +813,7 @@ to add-belief [ new_belief ]
 
   if belief_name = "bus-spec" [
     let b_id first value
-    
+
     ; remove the belief on bus with b_id
     set current_state filter [ first ? != b_id ] current_state
   ]
