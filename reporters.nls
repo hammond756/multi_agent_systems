@@ -75,11 +75,11 @@ to-report initial-fleet
 end
 
 ;; Report the shortest path a the bus' current stop to another stop
-to-report get-shortest-path-to [ bus_stop_id ]
+to-report get-shortest-path-to [ from_stop to_stop ]
   ; TODO (op meerdere plekken) alles met weighted graph doen!!
   let route []
-  ask bus_stop current_stop[
-    set route map [ [who] of ? ] nw:turtles-on-path-to turtle bus_stop_id
+  ask bus_stop from_stop[
+    set route map [ [who] of ? ] nw:turtles-on-weighted-path-to bus_stop to_stop "route_size"
   ]
   report route
 end
