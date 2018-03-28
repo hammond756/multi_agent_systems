@@ -120,7 +120,7 @@ end
 to init-initial-fleet
   set route_id (bus_id mod 7)
   set fixed_route get-route
-  set temp_route get-shortest-path-to current_stop (first fixed_route)  ;to get to the beginning of a route when just spawned
+  set temp_route but-first get-shortest-path-to current_stop (first fixed_route)  ;to get to the beginning of a route when just spawned
   set route-style "fixed"
 end
 
@@ -410,7 +410,7 @@ to go-to-crowded-stop [crowded-bus-stop]
   ]
 
   ; set temp route to route
-  set temp_route route
+  set temp_route but-first route
 
   show word "Im going to help bus stop: " crowded-bus-stop
 end
@@ -520,6 +520,9 @@ to fixed-bus-behaviour
       if current_stop = last fixed_route [
         set fixed_route reverse fixed_route
       ]
+      
+      set temp_route []
+      
       set next_stop next-stop-on-route fixed_route
 
       ; Only handle passengers on designated route, otherwise the transit system breaks.
@@ -739,7 +742,7 @@ to assign-to-route [ new_route_id ]
     ; if fixed route bus
     if route_id != 8 [
       set fixed_route get-route
-      set temp_route get-shortest-path-to current_stop (first fixed_route)
+      set temp_route but-first get-shortest-path-to current_stop (first fixed_route)
 
       set route-style "fixed"
     ]
