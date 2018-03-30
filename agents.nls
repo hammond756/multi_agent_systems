@@ -509,7 +509,7 @@ to fixed-bus-behaviour
       set stop_driving_at_next_stop? true
     ]
     if issue_of_vote = "vote-to-spawn" and count-votes "vote-to-spawn" 1 [
-      request-bus-on-route route_id 60
+      request-bus-on-route route_id fixed_bus_size
     ]
   ]
 
