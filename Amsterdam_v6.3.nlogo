@@ -43,6 +43,9 @@ globals [
   leasing_list
   average_travelling_time_remaining
   final_average_travelling_time
+  total_flexbus
+  total_fixedbus
+  total_idle
 ]
 
 to setup
@@ -88,6 +91,9 @@ to setup-statistics
   set amount_passengers_waiting 0
   set number_of_messages 0
   set final_average_travelling_time 0
+  set total_flexbus 0
+  set total_fixedbus 0
+  set total_idle 0
 end
 
 to update-passengers-statistics
@@ -245,12 +251,33 @@ to go
       user-message "You must click on setup first. In case you pressed the go button in 'forever' mode, please press 'Halt'."
     ]
     if not got_a_tick_error [
+
+
+      let fixed_bus 0
+      let flex_bus 0
+      let idle 0
+
+
+
+
+
       set-time
       update-passengers-statistics
       update-bus-stops
       ask buses [
+          if route_id = 8[
+            set flex_bus flex_bus + 1
+          ]
+          if route_id = -1[
+            set idle idle + 1
+          ]
+          if member? route_id  [0 1 2 3 4 5 6 7][
+            set fixed_bus fixed_bus + 1
+          ]
         execute-actions
       ]
+      update-total-buses fixed_bus flex_bus idle
+
       add-buses
     ]
   ]
@@ -554,6 +581,12 @@ to update-expenses [new_outcome]
   set expenses (expenses + new_outcome)
 end
 
+to update-total-buses [fixed flex idle]
+  set total_flexbus flex
+  set total_fixedbus fixed
+  set total_idle idle
+end
+
 to send-message [to_bus_id message]
   ifelse is-number? to_bus_id = false or count buses with [bus_id = to_bus_id] <= 0 [
     show (word "WARNING: send-message                  :" "bus does not exist: " to_bus_id)
@@ -591,6 +624,7 @@ to travel-to [bs_id]
       set nsx xcor
       set nsy ycor
     ]
+
     ask buses [
       if self = myself [
         ifelse is-adjacent? bus_id next_stop_id
@@ -615,6 +649,7 @@ to travel-to [bs_id]
               set cost bus_type3_cost_per_patch
             ]
           ]
+
           update-expenses cost
           set bsh get-bus-stop-here round xcor round ycor
           ifelse (not is-boolean? bsh) and bsh = next_stop
@@ -1041,7 +1076,7 @@ green_bus_ratio
 green_bus_ratio
 0
 10
-2
+1
 0.1
 1
 NIL
@@ -1056,7 +1091,7 @@ yellow_bus_ratio
 yellow_bus_ratio
 0
 10
-2
+1
 0.1
 1
 NIL
@@ -1071,7 +1106,7 @@ red_bus_ratio
 red_bus_ratio
 0
 10
-2
+1
 0.1
 1
 NIL
@@ -1086,6 +1121,39 @@ fixed_bus_size
 fixed_bus_size
 12 60 150
 0
+
+MONITOR
+1370
+235
+1464
+280
+total flexbus
+total_flexbus
+4
+1
+11
+
+MONITOR
+1375
+300
+1477
+345
+total fixedbus
+total_fixedbus
+5
+1
+11
+
+MONITOR
+1392
+366
+1464
+411
+total_idle
+total_idle
+5
+1
+11
 
 @#$#@#$#@
 ## WHAT IS IT?
@@ -1474,7 +1542,7 @@ NetLogo 5.3.1
 @#$#@#$#@
 @#$#@#$#@
 <experiments>
-  <experiment name="red flexbuses at 2.0 with varying fixed bus sizes" repetitions="1" runMetricsEveryStep="true">
+  <experiment name="red flexbuses at 1.0 with varying fixed bus sizes" repetitions="1" runMetricsEveryStep="true">
     <setup>setup</setup>
     <go>go</go>
     <metric>average_travelling_time</metric>
@@ -1484,10 +1552,10 @@ NetLogo 5.3.1
     <metric>number_of_messages</metric>
     <metric>count buses</metric>
     <enumeratedValueSet variable="green_bus_ratio">
-      <value value="2"/>
+      <value value="1"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="red_bus_ratio">
-      <value value="2"/>
+      <value value="1"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="fixed_bus_size">
       <value value="12"/>
@@ -1495,7 +1563,7 @@ NetLogo 5.3.1
       <value value="150"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="yellow_bus_ratio">
-      <value value="2"/>
+      <value value="1"/>
     </enumeratedValueSet>
   </experiment>
   <experiment name="yellow flexbuses at 2.0 with varying fixed bus sizes" repetitions="1" runMetricsEveryStep="true">
@@ -1522,7 +1590,7 @@ NetLogo 5.3.1
       <value value="2"/>
     </enumeratedValueSet>
   </experiment>
-  <experiment name="green flexbuses at 2.0 with varying fixed bus sizes" repetitions="1" runMetricsEveryStep="true">
+  <experiment name="green flexbuses at 1.0 with varying fixed bus sizes" repetitions="1" runMetricsEveryStep="true">
     <setup>setup</setup>
     <go>go</go>
     <metric>average_travelling_time</metric>
@@ -1532,7 +1600,7 @@ NetLogo 5.3.1
     <metric>number_of_messages</metric>
     <metric>count buses</metric>
     <enumeratedValueSet variable="green_bus_ratio">
-      <value value="2"/>
+      <value value="1"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="red_bus_ratio">
       <value value="10"/>
