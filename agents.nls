@@ -85,13 +85,13 @@ to request-flexible-bus [ratio]
   ; determine bus type
   let new_bus_capacity 12
 
-  if (ratio > yellow_bus_ratio) and (ratio < red_bus_ratio) [
+  if (ratio > yellow_bus_ratio) [
     set new_bus_capacity 60
   ]
 
-  if ratio >= red_bus_ratio [
-   set new_bus_capacity 150
-  ]
+  ;if ratio >= red_bus_ratio [
+  ; set new_bus_capacity 150
+  ;]
 
   ; determine which buses can become a new flexible bus of the type determined above
   let available_bus_ids idle-bus-with-capacity new_bus_capacity
