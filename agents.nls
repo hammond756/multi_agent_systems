@@ -84,7 +84,7 @@ to request-flexible-bus [ratio]
 
   ; determine bus type
   let new_bus_capacity 12
-  
+
   let green_bus_ratio first flex_ratios
   let yellow_bus_ratio last flex_ratios
 
@@ -92,7 +92,7 @@ to request-flexible-bus [ratio]
     set new_bus_capacity 60
   ]
 
-  ; if ratio >= red_bus_ratio [
+  ;if ratio >= red_bus_ratio [
   ; set new_bus_capacity 150
   ;]
 
@@ -525,9 +525,9 @@ to fixed-bus-behaviour
       if current_stop = last fixed_route [
         set fixed_route reverse fixed_route
       ]
-      
+
       set temp_route []
-      
+
       set next_stop next-stop-on-route fixed_route
 
       ; Only handle passengers on designated route, otherwise the transit system breaks.
@@ -683,13 +683,13 @@ to-report count-votes [ belief_name my_vote ]
 
   ; empty vote list
   table:put beliefs belief_name []
-  
+
   ifelse belief_name = "vote-to-spawn" [
     report votes_for / (length votes) >= 0.75
   ][
     report votes_for > votes_against
   ]
-  
+
 end
 
 ;;;;;; VOTE-TO-STOP
