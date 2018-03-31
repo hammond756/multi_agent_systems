@@ -25,10 +25,9 @@ buses-own [
   birth_tick
   tick_of_auction_request
   stops_with_outstanding_auctions
-  spawn?
 ]
 
-globals [graph flex_ratios]
+globals [graph]
 
 to init-buses
 
@@ -39,7 +38,6 @@ to init-buses
   set fixed_route []
   set temp_route []
   set route_id -1
-  set spawn? True
 
   set birth_tick ticks
 
@@ -84,9 +82,6 @@ to request-flexible-bus [ratio]
 
   ; determine bus type
   let new_bus_capacity 12
-
-  let green_bus_ratio first flex_ratios
-  let yellow_bus_ratio last flex_ratios
 
   if (ratio > yellow_bus_ratio) [
     set new_bus_capacity 60
@@ -233,7 +228,7 @@ to principle-agent-delegation
 
       let ratio waiting-capacity-ratio
       ; If the
-      if ratio > first flex_ratios [
+      if ratio > green_bus_ratio [
         ;New flexible bus is needed
         request-flexible-bus ratio
       ]
@@ -536,8 +531,17 @@ to fixed-bus-behaviour
     ][
       next-item-from-temp-route
     ]
+    ; add new bus if necessary
+    ; TODO: Doesn't take into account the destination of the people that can't be picked up
+    ; - Only relevant for transit-stations
+    ; TODO: De-activate buses / Re-route buses
+    ; TODO: Figure out what bus_type to spawn (do experiments on function parameters)
+    ; - Length of route
+    ; - Capacity
+    ; -
 
-    if full? and spawn? [
+    ; TODO: Check volgorde, volgensmij had ik dit verplaatst
+    if full? [
       request-vote-to-spawn
     ]
 
@@ -564,7 +568,7 @@ to flexible-bus-behaviour
     vote-next-stop
   ]
 
-  ; if waiting-capacity-ratio < green_bus_ratio [ set stop_driving_at_next_stop? True ]
+  if waiting-capacity-ratio < green_bus_ratio [ set stop_driving_at_next_stop? True ]
 end
 
 ;;;;;;; VOTING
@@ -689,7 +693,6 @@ to-report count-votes [ belief_name my_vote ]
   ][
     report votes_for > votes_against
   ]
-
 end
 
 ;;;;;; VOTE-TO-STOP

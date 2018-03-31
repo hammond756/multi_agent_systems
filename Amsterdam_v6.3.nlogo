@@ -1067,8 +1067,6 @@ false
 PENS
 "default" 1.0 0 -16777216 true "" "histogram [ route_id ] of buses"
 
-<<<<<<< HEAD
-=======
 SLIDER
 1185
 15
@@ -1114,7 +1112,6 @@ red_bus_ratio
 NIL
 VERTICAL
 
->>>>>>> fix
 CHOOSER
 1190
 179
@@ -1123,7 +1120,7 @@ CHOOSER
 fixed_bus_size
 fixed_bus_size
 12 60 150
-2
+0
 
 MONITOR
 1370
