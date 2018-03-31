@@ -28,7 +28,7 @@ buses-own [
   spawn?
 ]
 
-globals [graph]
+globals [graph flex_ratios]
 
 to init-buses
 
@@ -84,14 +84,17 @@ to request-flexible-bus [ratio]
 
   ; determine bus type
   let new_bus_capacity 12
+  
+  let green_bus_ratio first flex_ratios
+  let yellow_bus_ratio last flex_ratios
 
-  if (ratio > yellow_bus_ratio) and (ratio < red_bus_ratio) [
+  if (ratio > yellow_bus_ratio) [
     set new_bus_capacity 60
   ]
 
-  if ratio >= red_bus_ratio [
-   set new_bus_capacity 150
-  ]
+  ; if ratio >= red_bus_ratio [
+  ; set new_bus_capacity 150
+  ;]
 
   ; determine which buses can become a new flexible bus of the type determined above
   let available_bus_ids idle-bus-with-capacity new_bus_capacity
@@ -230,7 +233,7 @@ to principle-agent-delegation
 
       let ratio waiting-capacity-ratio
       ; If the
-      if ratio > green_bus_ratio [
+      if ratio > first flex_ratios [
         ;New flexible bus is needed
         request-flexible-bus ratio
       ]
