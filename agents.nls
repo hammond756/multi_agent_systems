@@ -25,6 +25,7 @@ buses-own [
   birth_tick
   tick_of_auction_request
   stops_with_outstanding_auctions
+  spawn?
 ]
 
 globals [graph]
@@ -38,6 +39,7 @@ to init-buses
   set fixed_route []
   set temp_route []
   set route_id -1
+  set spawn? True
 
   set birth_tick ticks
 
@@ -531,17 +533,8 @@ to fixed-bus-behaviour
     ][
       next-item-from-temp-route
     ]
-    ; add new bus if necessary
-    ; TODO: Doesn't take into account the destination of the people that can't be picked up
-    ; - Only relevant for transit-stations
-    ; TODO: De-activate buses / Re-route buses
-    ; TODO: Figure out what bus_type to spawn (do experiments on function parameters)
-    ; - Length of route
-    ; - Capacity
-    ; -
 
-    ; TODO: Check volgorde, volgensmij had ik dit verplaatst
-    if full? [
+    if full? and spawn? [
       request-vote-to-spawn
     ]
 
@@ -568,7 +561,7 @@ to flexible-bus-behaviour
     vote-next-stop
   ]
 
-  if waiting-capacity-ratio < green_bus_ratio [ set stop_driving_at_next_stop? True ]
+  ; if waiting-capacity-ratio < green_bus_ratio [ set stop_driving_at_next_stop? True ]
 end
 
 ;;;;;;; VOTING
@@ -687,8 +680,13 @@ to-report count-votes [ belief_name my_vote ]
 
   ; empty vote list
   table:put beliefs belief_name []
-
-  report votes_for > votes_against
+  
+  ifelse belief_name = "vote-to-spawn" [
+    report votes_for / (length votes) >= 0.75
+  ][
+    report votes_for > votes_against
+  ]
+  
 end
 
 ;;;;;; VOTE-TO-STOP

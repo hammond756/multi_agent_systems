@@ -1091,7 +1091,7 @@ yellow_bus_ratio
 yellow_bus_ratio
 0
 10
-2
+10
 0.1
 1
 NIL
@@ -1120,7 +1120,7 @@ CHOOSER
 fixed_bus_size
 fixed_bus_size
 12 60 150
-0
+2
 
 MONITOR
 1370
