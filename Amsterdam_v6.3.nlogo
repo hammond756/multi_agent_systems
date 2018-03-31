@@ -1076,7 +1076,7 @@ green_bus_ratio
 green_bus_ratio
 0
 10
-1
+2
 0.1
 1
 NIL
@@ -1091,7 +1091,7 @@ yellow_bus_ratio
 yellow_bus_ratio
 0
 10
-1
+2
 0.1
 1
 NIL
@@ -1106,7 +1106,7 @@ red_bus_ratio
 red_bus_ratio
 0
 10
-1
+10
 0.1
 1
 NIL
@@ -1551,6 +1551,9 @@ NetLogo 5.3.1
     <metric>expenses</metric>
     <metric>number_of_messages</metric>
     <metric>count buses</metric>
+    <metric>total_flexbus</metric>
+    <metric>total_fixedbus</metric>
+    <metric>total_idle</metric>
     <enumeratedValueSet variable="green_bus_ratio">
       <value value="1"/>
     </enumeratedValueSet>
@@ -1575,6 +1578,9 @@ NetLogo 5.3.1
     <metric>expenses</metric>
     <metric>number_of_messages</metric>
     <metric>count buses</metric>
+    <metric>total_flexbus</metric>
+    <metric>total_fixedbus</metric>
+    <metric>total_idle</metric>
     <enumeratedValueSet variable="green_bus_ratio">
       <value value="2"/>
     </enumeratedValueSet>
@@ -1590,7 +1596,7 @@ NetLogo 5.3.1
       <value value="2"/>
     </enumeratedValueSet>
   </experiment>
-  <experiment name="green flexbuses at 1.0 with varying fixed bus sizes" repetitions="1" runMetricsEveryStep="true">
+  <experiment name="green flexbuses at 2.0 with varying fixed bus sizes" repetitions="1" runMetricsEveryStep="true">
     <setup>setup</setup>
     <go>go</go>
     <metric>average_travelling_time</metric>
@@ -1599,8 +1605,11 @@ NetLogo 5.3.1
     <metric>expenses</metric>
     <metric>number_of_messages</metric>
     <metric>count buses</metric>
+    <metric>total_flexbus</metric>
+    <metric>total_fixedbus</metric>
+    <metric>total_idle</metric>
     <enumeratedValueSet variable="green_bus_ratio">
-      <value value="1"/>
+      <value value="2"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="red_bus_ratio">
       <value value="10"/>

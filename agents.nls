@@ -462,7 +462,7 @@ to process-inbox
         agree-to-request sender
         run action
       ][
-        fail-on-request sender (word "Not able to perform " action " for " sender)
+        ; fail-on-request sender (word "Not able to perform " action " for " sender)
       ]
     ]
 

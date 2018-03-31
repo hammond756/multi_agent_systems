@@ -133,13 +133,13 @@ end
 to-report waiting-capacity-ratio
   ; Sum the capacity of all buses that are currently active
   let current_state_beliefs table:get beliefs "bus-spec"
-  let sum_capacity 0
+  let sum_capacity 1
   
   ; for all buses, if it is active, add to total fleet capacity
   foreach current_state_beliefs[
     
     let temp_bus ?
-    if item 2 temp_bus != -1[
+    if item 2 temp_bus = 8 [
        let temp_capacity item 1 temp_bus
        
        set sum_capacity sum_capacity + temp_capacity
