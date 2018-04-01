@@ -1076,7 +1076,7 @@ green_bus_ratio
 green_bus_ratio
 0
 10
-2
+0.5
 0.1
 1
 NIL
@@ -1091,7 +1091,7 @@ yellow_bus_ratio
 yellow_bus_ratio
 0
 10
-2
+1
 0.1
 1
 NIL
@@ -1120,7 +1120,7 @@ CHOOSER
 fixed_bus_size
 fixed_bus_size
 12 60 150
-0
+2
 
 MONITOR
 1370
@@ -1542,87 +1542,6 @@ NetLogo 5.3.1
 @#$#@#$#@
 @#$#@#$#@
 <experiments>
-  <experiment name="red flexbuses at 1.0 with varying fixed bus sizes" repetitions="1" runMetricsEveryStep="true">
-    <setup>setup</setup>
-    <go>go</go>
-    <metric>average_travelling_time</metric>
-    <metric>final_average_travelling_time</metric>
-    <metric>average_travelling_time_remaining</metric>
-    <metric>expenses</metric>
-    <metric>number_of_messages</metric>
-    <metric>count buses</metric>
-    <metric>total_flexbus</metric>
-    <metric>total_fixedbus</metric>
-    <metric>total_idle</metric>
-    <enumeratedValueSet variable="green_bus_ratio">
-      <value value="1"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="red_bus_ratio">
-      <value value="1"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="fixed_bus_size">
-      <value value="12"/>
-      <value value="60"/>
-      <value value="150"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="yellow_bus_ratio">
-      <value value="1"/>
-    </enumeratedValueSet>
-  </experiment>
-  <experiment name="yellow flexbuses at 2.0 with varying fixed bus sizes" repetitions="1" runMetricsEveryStep="true">
-    <setup>setup</setup>
-    <go>go</go>
-    <metric>average_travelling_time</metric>
-    <metric>final_average_travelling_time</metric>
-    <metric>average_travelling_time_remaining</metric>
-    <metric>expenses</metric>
-    <metric>number_of_messages</metric>
-    <metric>count buses</metric>
-    <metric>total_flexbus</metric>
-    <metric>total_fixedbus</metric>
-    <metric>total_idle</metric>
-    <enumeratedValueSet variable="green_bus_ratio">
-      <value value="2"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="red_bus_ratio">
-      <value value="10"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="fixed_bus_size">
-      <value value="12"/>
-      <value value="60"/>
-      <value value="150"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="yellow_bus_ratio">
-      <value value="2"/>
-    </enumeratedValueSet>
-  </experiment>
-  <experiment name="green flexbuses at 2.0 with varying fixed bus sizes" repetitions="1" runMetricsEveryStep="true">
-    <setup>setup</setup>
-    <go>go</go>
-    <metric>average_travelling_time</metric>
-    <metric>final_average_travelling_time</metric>
-    <metric>average_travelling_time_remaining</metric>
-    <metric>expenses</metric>
-    <metric>number_of_messages</metric>
-    <metric>count buses</metric>
-    <metric>total_flexbus</metric>
-    <metric>total_fixedbus</metric>
-    <metric>total_idle</metric>
-    <enumeratedValueSet variable="green_bus_ratio">
-      <value value="2"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="red_bus_ratio">
-      <value value="10"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="fixed_bus_size">
-      <value value="12"/>
-      <value value="60"/>
-      <value value="150"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="yellow_bus_ratio">
-      <value value="10"/>
-    </enumeratedValueSet>
-  </experiment>
   <experiment name="red fixed buses with green/yellow flex buses" repetitions="1" runMetricsEveryStep="true">
     <setup>setup</setup>
     <go>go</go>
@@ -1677,6 +1596,33 @@ NetLogo 5.3.1
       <value value="2"/>
       <value value="2.5"/>
       <value value="3"/>
+    </enumeratedValueSet>
+  </experiment>
+  <experiment name="red fixed buses with green/yellow flex buses 0.5" repetitions="1" runMetricsEveryStep="true">
+    <setup>setup</setup>
+    <go>go</go>
+    <metric>average_travelling_time</metric>
+    <metric>final_average_travelling_time</metric>
+    <metric>average_travelling_time_remaining</metric>
+    <metric>expenses</metric>
+    <metric>number_of_messages</metric>
+    <metric>count buses</metric>
+    <metric>total_flexbus</metric>
+    <metric>total_fixedbus</metric>
+    <metric>total_idle</metric>
+    <enumeratedValueSet variable="green_bus_ratio">
+      <value value="0.5"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="red_bus_ratio">
+      <value value="10"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="fixed_bus_size">
+      <value value="150"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="yellow_bus_ratio">
+      <value value="1"/>
+      <value value="1.5"/>
+      <value value="2"/>
     </enumeratedValueSet>
   </experiment>
 </experiments>

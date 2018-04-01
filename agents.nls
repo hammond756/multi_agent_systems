@@ -208,7 +208,6 @@ to execute-actions
     principle-agent-delegation
   ]
 
-
   ; Unassigned busses just read their messages
   if not (route_id > -1) [ stop ]
 
@@ -568,7 +567,7 @@ to flexible-bus-behaviour
     vote-next-stop
   ]
 
-  if waiting-capacity-ratio < green_bus_ratio [ set stop_driving_at_next_stop? True ]
+  ; if waiting-capacity-ratio < green_bus_ratio [ set stop_driving_at_next_stop? True ]
 end
 
 ;;;;;;; VOTING
@@ -742,6 +741,11 @@ to assign-to-route [ new_route_id ]
   if can-assign-to-route new_route_id [
     set route_id new_route_id
     set stop_driving_at_next_stop? False
+    
+    ; buses-own get initialized to 0, so this indicates the bus has never been used
+    if route-style = 0 [
+      add-bus bus_type
+    ]
 
     ; if fixed route bus
     if route_id != 8 [
@@ -756,9 +760,6 @@ to assign-to-route [ new_route_id ]
     ]
 
     broadcast-reassignment
-
-    ;TODO NIET MEER ALTIJD NIEUWE BUS TOEVOEGEN
-    add-bus bus_type
   ]
 end
 ; check condition on which bus is able to assign itself to a new route
